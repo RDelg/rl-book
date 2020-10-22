@@ -6,7 +6,7 @@ from maze import Enviroment
 
 
 class ValueLearner(object):
-    """ValueLearner represents a value learner for a 2D grid world.
+    """Value learner for a 2D grid world.
 
     Parameters
     ----------
@@ -14,7 +14,7 @@ class ValueLearner(object):
         Maze enviroment to work with.
 
     discount : float
-        Discount factor to calculate the total return of the state.
+        Discount factor to calculate the return of the state.
 
     random : bool, default=True
         If True, it updates the value of each state simulating taking the action
