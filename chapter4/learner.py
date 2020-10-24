@@ -7,6 +7,13 @@ from env import Enviroment
 
 class Learner:
     def __init__(self, env: Type[Enviroment], eps: float = 0.001, **env_args):
+        assert (
+            len(env.obs_space().dims) == 1
+        ), "Enviroment observation space dims must be 1 dimentional"
+        assert (
+            len(env.obs_space().dims) == 1
+        ), "Enviroment action space dims must be 1 dimentional"
+
         self.obs_space_range = env.obs_space().max - env.obs_space().min + 1
         self.action_space_range = env.act_space().max - env.act_space().min + 1
         self.action_probability = 1.0 / self.action_space_range
