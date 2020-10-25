@@ -53,7 +53,7 @@ class Learner:
                 flags=["multi_index"],
                 op_flags=[["readwrite"], ["readonly"]],
             ) as it:
-                for val, pol in tqdm(it, desc="Policy evaluation pass"):
+                for val, pol in tqdm(it, desc="Policy evaluation swing"):
                     val[...] = self.env.dynamics(it.multi_index, pol)
             max_diff = np.max(np.abs(self.value - old_value))
             print(f"Max diff: {max_diff}")
