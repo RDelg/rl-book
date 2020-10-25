@@ -7,7 +7,7 @@ from env import Enviroment
 
 
 class Learner:
-    def __init__(self, env: Type[Enviroment], eps: float = 0.001, **env_args):
+    def __init__(self, env: Type[Enviroment], eps: float = 0.001, **env_kwargs):
         assert (
             len(env.obs_space().dims) == 1
         ), "Enviroment observation space dims must be 1 dimentional"
@@ -17,17 +17,17 @@ class Learner:
 
         self.obs_space_range = env.obs_space().max - env.obs_space().min + 1
         self.action_space_range = env.act_space().max - env.act_space().min + 1
-        self.action_probability = 1.0 / self.action_space_range
         self.obs_space_shape = [
             self.obs_space_range for _ in range(env.obs_space().dims[0])
         ]
-        self.eps = eps
-        self.reset()
-        self.env = env(self.value, **env_args)
+        self._eps = eps
+        self._env_cls = env
+        self.reset(**env_kwargs)
 
-    def reset(self):
+    def reset(self, **env_kwargs):
         self.value = np.zeros(shape=self.obs_space_shape)
         self.policy = np.zeros(shape=self.obs_space_shape, dtype=np.int32)
+        self.env = self._env_cls(self.value, **env_kwargs)
 
     def policy_improvement(self):
         stable = True
@@ -45,8 +45,7 @@ class Learner:
                     stable = False
         return stable
 
-    def policy_evaluation(self):
-        max_iters = 100
+    def policy_evaluation(self, max_iters: int = 100):
         for _ in tqdm(range(max_iters), desc="Policy evaluation"):
             old_value = self.value.copy()
             with np.nditer(
@@ -58,7 +57,7 @@ class Learner:
                     val[...] = self.env.dynamics(it.multi_index, pol)
             max_diff = np.max(np.abs(self.value - old_value))
             print(f"Max diff: {max_diff}")
-            if max_diff < self.eps:
+            if max_diff < self._eps:
                 print("Converged")
                 break
 
