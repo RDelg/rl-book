@@ -32,6 +32,11 @@ class Enviroment(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
+    def legal_actions(self, *args, **kwargs) -> np.array:
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
     def obs_space() -> Space:
         raise NotImplementedError
 
