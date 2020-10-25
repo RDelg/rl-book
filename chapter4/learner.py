@@ -1,7 +1,10 @@
-from typing import Type
+from typing import Type, Tuple
 
 import numpy as np
+import matplotlib.pyplot as plt
 from tqdm import tqdm
+from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
 
 from env import Enviroment
 
@@ -61,45 +64,50 @@ class Learner:
                 print("Converged")
                 break
 
-    # def plot_policy(self, ax=None, figsize=(6, 6)):
-    #     if ax is None:
-    #         fig, ax = plt.subplots(figsize=figsize)
-    #     img = np.flipud(self.policy)
-    #     im = ax.imshow(img)
-    #     # We want to show all ticks...
-    #     ax.set_xticks(np.arange(self.obs_space_range))
-    #     ax.set_yticks(np.flip(np.arange(self.obs_space_range)))
+    def plot_policy(
+        self,
+        ax: plt.Axes = None,
+        figsize: Tuple[int, int] = (6, 6),
+        title: str = "Policy",
+    ):
+        if ax is None:
+            _, ax = plt.subplots(figsize=figsize)
+        img = np.flipud(self.policy)
+        ax.imshow(img)
+        # We want to show all ticks...
+        ax.set_xticks(np.arange(self.obs_space_range))
+        ax.set_yticks(np.flip(np.arange(self.obs_space_range)))
 
-    #     ax.set_xticklabels(np.arange(self.obs_space_range))
-    #     ax.set_yticklabels(np.arange(self.obs_space_range))
+        ax.set_xticklabels(np.arange(self.obs_space_range))
+        ax.set_yticklabels(np.arange(self.obs_space_range))
 
-    #     # Rotate the tick labels and set their alignment.
-    #     plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+        # Rotate the tick labels and set their alignment.
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
-    #     # Loop over data dimensions and create text annotations.
-    #     for i in range(self.obs_space_range):
-    #         for j in range(self.obs_space_range):
-    #             text = ax.text(j, i, img[i, j], ha="center", va="center", color="w")
+        # Loop over data dimensions and create text annotations.
+        for i in range(self.obs_space_range):
+            for j in range(self.obs_space_range):
+                ax.text(j, i, img[i, j], ha="center", va="center", color="w")
 
-    #     ax.set_title("Policy")
+        ax.set_title(title)
 
-    # def plot_value(self, ax=None, figsize=(6, 6)):
-    #     if ax is None:
-    #         fig, ax = plt.subplots(figsize=figsize)
-    #         ax = fig.add_subplot(111, projection="3d")
+    def plot_value(
+        self,
+        ax: plt.Axes = None,
+        figsize: Tuple[int, int] = (6, 6),
+        title: str = "Value",
+    ):
+        if ax is None:
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111, projection="3d")
 
-    #     x = np.arange(self.obs_space_range)
-    #     y = np.arange(self.obs_space_range)
-    #     X, Y = np.meshgrid(x, y)
-    #     ax.plot_surface(X, Y, self.value, cmap=cm.coolwarm)
-    #     ax.set_xticks(np.arange(self.obs_space_range))
-    #     ax.set_yticks(np.flip(np.arange(self.obs_space_range)))
+        x = np.arange(self.obs_space_range)
+        y = np.arange(self.obs_space_range)
+        X, Y = np.meshgrid(x, y)
+        ax.plot_surface(X, Y, self.value, cmap=cm.get_cmap("coolwarm"))
+        ax.set_xticks(np.arange(self.obs_space_range))
+        ax.set_yticks(np.flip(np.arange(self.obs_space_range)))
 
-    #     ax.set_xticklabels(np.arange(self.obs_space_range))
-    #     ax.set_yticklabels(np.arange(self.obs_space_range))
-    #     ax.set_title("Value")
-
-    # def plot(self, figsize=(12, 6)):
-    #     fig = plt.figure(figsize=figsize)
-    #     self.plot_policy(fig.add_subplot(121))
-    #     self.plot_value(fig.add_subplot(122, projection="3d"))
+        ax.set_xticklabels(np.arange(self.obs_space_range))
+        ax.set_yticklabels(np.arange(self.obs_space_range))
+        ax.set_title(title)
