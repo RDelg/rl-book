@@ -9,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from env import Enviroment
 
 
-class Learner:
+class DynamicPolicyLearner:
     def __init__(self, env: Type[Enviroment], eps: float = 0.001, **env_kwargs):
         assert (
             len(env.obs_space().dims) == 1
