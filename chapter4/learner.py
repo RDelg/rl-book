@@ -37,7 +37,7 @@ class DynamicPolicyLearner:
         with np.nditer(
             [self.policy], flags=["multi_index"], op_flags=[["readwrite"]]
         ) as it:
-            for pol in tqdm(it, desc="Policy improvement"):
+            for pol in tqdm(it, desc="Policy improvement", total=self.policy.size):
                 old_action = np.int32(pol)
                 actions = self.env.legal_actions(it.multi_index)
                 q = np.zeros_like(actions, dtype=np.float32)
@@ -49,6 +49,7 @@ class DynamicPolicyLearner:
         return stable
 
     def policy_evaluation(self, max_iters: int = 100):
+        max_diff = np.inf
         for _ in tqdm(range(max_iters), desc="Policy evaluation"):
             old_value = self.value.copy()
             with np.nditer(
@@ -56,12 +57,15 @@ class DynamicPolicyLearner:
                 flags=["multi_index"],
                 op_flags=[["readwrite"], ["readonly"]],
             ) as it:
-                for val, pol in tqdm(it, desc="Policy evaluation sweep"):
+                for val, pol in tqdm(
+                    it,
+                    total=self.value.size,
+                    desc=f"Policy evaluation sweep. Last max diff: {max_diff}",
+                    leave=False,
+                ):
                     val[...] = self.env.dynamics(it.multi_index, pol)
             max_diff = np.max(np.abs(self.value - old_value))
-            print(f"Max diff: {max_diff}")
             if max_diff < self._eps:
-                print("Converged")
                 break
 
     def plot_policy(
