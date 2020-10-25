@@ -1,6 +1,7 @@
 from typing import Type
 
 import numpy as np
+from tqdm import tqdm
 
 from env import Enviroment
 
@@ -29,41 +30,37 @@ class Learner:
         self.policy = np.zeros(shape=self.obs_space_shape, dtype=np.int32)
 
     def policy_improvement(self):
-        print("Running policy improvement")
         stable = True
         with np.nditer(
             [self.policy], flags=["multi_index"], op_flags=[["readwrite"]]
         ) as it:
-            while not it.finished:
-                old_action = np.int32(it[0])
+            for pol in tqdm(it, desc="Policy improvement"):
+                old_action = np.int32(pol)
                 actions = self.env.legal_actions(it.multi_index)
                 q = np.zeros_like(actions, dtype=np.float32)
                 for a, action in enumerate(actions):
                     q[a] += self.env.dynamics(it.multi_index, action)
-                it[0][...] = actions[np.argmax(q)]
-                if np.int32(it[0]) != old_action:
+                pol[...] = actions[np.argmax(q)]
+                if np.int32(pol) != old_action:
                     stable = False
-                it.iternext()
         return stable
 
     def policy_evaluation(self):
-        print("Running policy evaluation")
-        converged = False
-        while not converged:
+        max_iters = 100
+        for _ in tqdm(range(max_iters), desc="Policy evaluation"):
             old_value = self.value.copy()
             with np.nditer(
                 [self.value, self.policy],
                 flags=["multi_index"],
                 op_flags=[["readwrite"], ["readonly"]],
             ) as it:
-                while not it.finished:
-                    it[0][...] = self.env.dynamics(it.multi_index, it[1])
-                    it.iternext()
+                for val, pol in tqdm(it, desc="Policy evaluation pass"):
+                    val[...] = self.env.dynamics(it.multi_index, pol)
             max_diff = np.max(np.abs(self.value - old_value))
             print(f"Max diff: {max_diff}")
             if max_diff < self.eps:
-                converged = True
                 print("Converged")
+                break
 
     # def plot_policy(self, ax=None, figsize=(6, 6)):
     #     if ax is None:
