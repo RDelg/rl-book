@@ -43,16 +43,18 @@ class Maze(object):
         self.state = np.array(init_state)
         self.shape = shape
 
-    def add_reward(self, state: np.ndarray, reward: float):
+    def add_reward(self, state: Tuple[int, int], reward: float):
         """Adds a reward to the state"""
         assert len(state) == 2, "state shape must be 2D"
         self.rewards[state[0], state[1]] = reward
 
-    def add_hop(self, state: np.ndarray, new_state: np.ndarray):
+    def add_hop(self, state: Tuple[int, int], new_state: Tuple[int, int]):
         """Adds a hop from state to new_state"""
         assert len(state) == 2, "state shape must be 2D"
         assert len(new_state) == 2, "state shape must be 2D"
-        self.hops.append({"old_state": state, "new_state": new_state})
+        self.hops.append(
+            {"old_state": np.array(state), "new_state": np.array(new_state)}
+        )
 
     def set_state(self, state: Tuple[int, int]):
         """Sets the current state"""

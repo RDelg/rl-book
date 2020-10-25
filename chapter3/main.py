@@ -39,10 +39,10 @@ def figure_3_5(maze: Maze, discount: float):
 
 def main():
     SHAPE = (5, 5)
-    A = np.array([0, 1])
-    A_PRIME = np.array([4, 1])
-    B = np.array([0, 3])
-    B_PRIME = np.array([2, 3])
+    A = (0, 1)
+    A_PRIME = (4, 1)
+    B = (0, 3)
+    B_PRIME = (2, 3)
     DISCOUNT = 0.9
 
     m = Maze(shape=SHAPE)
