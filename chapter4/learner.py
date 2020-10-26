@@ -3,7 +3,6 @@ from typing import Type, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 
 from env import Enviroment
@@ -77,13 +76,22 @@ class DynamicPolicyLearner:
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
         img = np.flipud(self.policy)
-        ax.imshow(img)
-        # We want to show all ticks...
-        ax.set_xticks(np.arange(self.obs_space_range))
-        ax.set_yticks(np.flip(np.arange(self.obs_space_range)))
+        ax.imshow(
+            img,
+            cmap=plt.get_cmap("Spectral"),
+            vmin=self._env_cls.act_space().min,
+            vmax=self._env_cls.act_space().max,
+        )
 
-        ax.set_xticklabels(np.arange(self.obs_space_range))
-        ax.set_yticklabels(np.arange(self.obs_space_range))
+        # We don't want to show all ticks...
+        ticks_range = np.arange(self.obs_space_range)
+        ticks_plot = [ticks_range[0], ticks_range[-1]]
+
+        ax.set_xticks(ticks_plot)
+        ax.set_yticks(np.flip(ticks_plot))
+
+        ax.set_xticklabels(ticks_plot)
+        ax.set_yticklabels(ticks_plot)
 
         # Rotate the tick labels and set their alignment.
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
@@ -91,7 +99,9 @@ class DynamicPolicyLearner:
         # Loop over data dimensions and create text annotations.
         for i in range(self.obs_space_range):
             for j in range(self.obs_space_range):
-                ax.text(j, i, img[i, j], ha="center", va="center", color="w")
+                ax.text(
+                    j, i, img[i, j], ha="center", va="center", color="b", fontsize=8
+                )
 
         ax.set_title(title)
 
@@ -108,10 +118,18 @@ class DynamicPolicyLearner:
         x = np.arange(self.obs_space_range)
         y = np.arange(self.obs_space_range)
         X, Y = np.meshgrid(x, y)
-        ax.plot_surface(X, Y, self.value, cmap=cm.get_cmap("coolwarm"))
-        ax.set_xticks(np.arange(self.obs_space_range))
-        ax.set_yticks(np.flip(np.arange(self.obs_space_range)))
+        ax.plot_surface(X, Y, np.fliplr(self.value), cmap=plt.get_cmap("Spectral"))
 
-        ax.set_xticklabels(np.arange(self.obs_space_range))
-        ax.set_yticklabels(np.arange(self.obs_space_range))
+        # We don't want to show all ticks...
+        ticks_range = np.arange(self.obs_space_range)
+        ticks_plot = [ticks_range[0], ticks_range[-1]]
+
+        ax.set_xticks(ticks_plot)
+        ax.set_yticks(ticks_plot)
+
+        ax.set_xticklabels(np.flip(ticks_plot))
+        ax.set_yticklabels(ticks_plot)
+
         ax.set_title(title)
+        # Rotate
+        ax.view_init(60, 60)

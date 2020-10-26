@@ -50,10 +50,10 @@ class RentalCarEnv(Enviroment):
     # How many values of the Poisson distributtion use to calculate the dynamics
     _poisson_range = 11
     # Rental car lambdas
-    _lam_in_a = 3
-    _lam_out_a = 3
-    _lam_in_b = 4
-    _lam_out_b = 2
+    _lam_in_a = 4
+    _lam_out_a = 2
+    _lam_in_b = 3
+    _lam_out_b = 3
     # Reward values
     _move_reward = -2
     _rental_reward = 10
