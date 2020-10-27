@@ -79,3 +79,28 @@ class DynamicPolicyLearner:
             max_diff = np.max(np.abs(self.value - old_value))
             if max_diff < self._eps:
                 break
+
+    def value_iteration(self, max_iters: int = 100):
+        max_diff = np.inf
+        for it in tqdm(range(max_iters), desc="Policy evaluation"):
+            old_value = self.value.copy()
+            with np.nditer(
+                [self.value],
+                flags=["multi_index"],
+                op_flags=[["readwrite"]],
+            ) as it:
+                for val in tqdm(
+                    it,
+                    total=self.value.size,
+                    desc=f"Policy evaluation iter {it}. Last max diff: {max_diff}",
+                    leave=False,
+                ):
+                    state = self.env.idx_to_state(it.multi_index)
+                    actions = self.env.legal_actions(state)
+                    q = np.zeros_like(actions, dtype=np.float32)
+                    for a, action in enumerate(actions):
+                        q[a] += self.env.dynamics(state, action)
+                    val[...] = np.max(q[a])
+            max_diff = np.max(np.abs(self.value - old_value))
+            if max_diff < self._eps:
+                break
