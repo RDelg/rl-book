@@ -46,11 +46,11 @@ class Enviroment(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def idx_to_state(self, idx: Tuple[int]) -> Tuple[int]:
+    def idx_to_state(self, *args, **kwargs) -> Tuple:
         raise NotImplementedError
 
     @abstractmethod
-    def state_to_idx(self, state: Tuple[int]) -> Tuple[int]:
+    def state_to_idx(self, *args, **kwargs) -> Tuple:
         raise NotImplementedError
 
 
@@ -78,6 +78,12 @@ class RentalCarEnv(Enviroment):
         # Instantiate spaces to reduce allocations
         self._obs_space = self.obs_space()
         self._act_space = self.act_space()
+
+    def idx_to_state(self, idx: Tuple[int, int]) -> Tuple[int, int]:
+        return idx
+
+    def state_to_idx(self, state: Tuple[int, int]) -> Tuple[int, int]:
+        return state
 
     @staticmethod
     def obs_space() -> Space:

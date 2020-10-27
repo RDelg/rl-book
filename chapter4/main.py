@@ -109,5 +109,5 @@ def figure_4_3():
 
 
 if __name__ == "__main__":
-    # figure_4_2()
+    figure_4_2()
     figure_4_3()
