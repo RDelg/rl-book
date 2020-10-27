@@ -11,6 +11,7 @@ class DynamicPolicyLearner:
         self,
         env: Type[Enviroment],
         eps: float = 0.001,
+        initial_policy: Optional[np.array] = None,
         **env_kwargs,
     ):
         assert (
@@ -27,11 +28,17 @@ class DynamicPolicyLearner:
         ]
         self._eps = eps
         self._env_cls = env
-        self.reset(**env_kwargs)
+        self.reset(initial_policy, **env_kwargs)
 
-    def reset(self, **env_kwargs):
+    def reset(self, initial_policy, **env_kwargs):
         self.value = np.zeros(shape=self.obs_space_shape)
-        self.policy = np.zeros(shape=self.obs_space_shape, dtype=np.int32)
+        if initial_policy is not None:
+            assert all(
+                [(a == b) for a, b in zip(initial_policy.shape, self.obs_space_shape)]
+            ), f"initial policy must have shape {self.obs_space_shape}"
+            self.policy = initial_policy.copy()
+        else:
+            self.policy = np.zeros(shape=self.obs_space_shape, dtype=np.int32)
         self.env = self._env_cls(self.value, **env_kwargs)
 
     def policy_improvement(self):
