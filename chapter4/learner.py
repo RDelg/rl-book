@@ -100,7 +100,7 @@ class DynamicPolicyLearner:
                     q = np.zeros_like(actions, dtype=np.float32)
                     for a, action in enumerate(actions):
                         q[a] += self.env.dynamics(state, action)
-                    val[...] = np.max(q[a])
+                    val[...] = np.max(q)
             max_diff = np.max(np.abs(self.value - old_value))
             if max_diff < self._eps:
                 break
