@@ -167,11 +167,10 @@ class RentalCarEnv(Enviroment):
 
 class GamblerEnv(Enviroment):
     _coin_head_prob = 0.4
-    _coin_tail_prob = 1.0 - _coin_head_prob
     # Rewards
     _win_reward = 1.0
 
-    def __init__(self, value: np.array, gamma: float = 0.9):
+    def __init__(self, value: np.array, gamma: float = 1.0):
         self.gamma = gamma
         self.value = value
         # Instantiate spaces to reduce allocations
@@ -194,20 +193,22 @@ class GamblerEnv(Enviroment):
 
     def dynamics(self, state: Tuple[int], action: int) -> float:
         # Tail case
-        value = self._coin_tail_prob * (
-            self.gamma * self.value[self.state_to_idx((state[0] - action,))]
-        )
+        new_head_idx = self.state_to_idx((state[0] - action,))
+        if new_head_idx[0] < 0:
+            ret = 0.0
+        else:
+            ret = (1.0 - self._coin_head_prob) * (self.gamma * self.value[new_head_idx])
         # Head case
         new_head_state = (state[0] + action,)
         if new_head_state[0] == 100:
-            value += self._coin_head_prob * self._win_reward
+            ret += self._coin_head_prob * self._win_reward
         else:
-            value += self._coin_head_prob * (
+            ret += self._coin_head_prob * (
                 self.gamma * self.value[self.state_to_idx(new_head_state)]
             )
-        return value
+        return ret
 
     @staticmethod
     @lru_cache(maxsize=None)
     def legal_actions(state: Tuple[int]) -> np.array:
-        return np.arange(0, min(state[0], 100 - state[0]) + 1)
+        return np.arange(1, min(state[0], 100 - state[0]) + 1)
