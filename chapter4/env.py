@@ -89,7 +89,7 @@ class RentalCarEnv(Enviroment):
             dtype=np.int32,
         )
 
-    def dynamics(self, state: Tuple[int, int], action: int):
+    def dynamics(self, state: Tuple[int, int], action: int) -> float:
         value = 0.0
         reward_base = np.abs(action) * np.float32(self._move_reward)
         state = list(state)
