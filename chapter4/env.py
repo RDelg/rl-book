@@ -45,6 +45,14 @@ class Enviroment(metaclass=ABCMeta):
     def act_space() -> Space:
         raise NotImplementedError
 
+    @abstractmethod
+    def idx_to_state(self, idx: Tuple[int]) -> Tuple[int]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def state_to_idx(self, state: Tuple[int]) -> Tuple[int]:
+        raise NotImplementedError
+
 
 class RentalCarEnv(Enviroment):
     # How many values of the Poisson distributtion use to calculate the dynamics

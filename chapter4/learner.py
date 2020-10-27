@@ -1,4 +1,4 @@
-from typing import Type, Tuple
+from typing import Type, Tuple, Optional
 
 import numpy as np
 from tqdm import tqdm
@@ -7,7 +7,12 @@ from env import Enviroment
 
 
 class DynamicPolicyLearner:
-    def __init__(self, env: Type[Enviroment], eps: float = 0.001, **env_kwargs):
+    def __init__(
+        self,
+        env: Type[Enviroment],
+        eps: float = 0.001,
+        **env_kwargs,
+    ):
         assert (
             len(env.obs_space().dims) == 1
         ), "Enviroment observation space dims must be 1 dimentional"
@@ -36,10 +41,11 @@ class DynamicPolicyLearner:
         ) as it:
             for pol in tqdm(it, desc="Policy improvement", total=self.policy.size):
                 old_action = np.int32(pol)
-                actions = self.env.legal_actions(it.multi_index)
+                state = self.env.idx_to_state(it.multi_index)
+                actions = self.env.legal_actions(state)
                 q = np.zeros_like(actions, dtype=np.float32)
                 for a, action in enumerate(actions):
-                    q[a] += self.env.dynamics(it.multi_index, action)
+                    q[a] += self.env.dynamics(state, action)
                 pol[...] = actions[np.argmax(q)]
                 if np.int32(pol) != old_action:
                     stable = False
@@ -60,7 +66,9 @@ class DynamicPolicyLearner:
                     desc=f"Policy evaluation sweep. Last max diff: {max_diff}",
                     leave=False,
                 ):
-                    val[...] = self.env.dynamics(it.multi_index, pol)
+                    val[...] = self.env.dynamics(
+                        self.env.idx_to_state(it.multi_index), pol
+                    )
             max_diff = np.max(np.abs(self.value - old_value))
             if max_diff < self._eps:
                 break
