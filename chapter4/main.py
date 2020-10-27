@@ -93,8 +93,9 @@ def figure_4_3():
     initial_policy = np.array(
         [GamblerEnv.legal_actions((i + 1,)).max() for i in range(99)]
     )
-    learner = DynamicPolicyLearner(GamblerEnv, initial_policy=initial_policy)
-    learner.policy_evaluation(max_iters=10)
+
+    learner = DynamicPolicyLearner(GamblerEnv, eps=1e-12, initial_policy=initial_policy)
+    learner.policy_evaluation(max_iters=100)
     learner.policy_improvement()
 
     fig = plt.figure(figsize=(12, 6))
@@ -103,7 +104,7 @@ def figure_4_3():
     ax.plot(learner.value)
 
     ax = fig.add_subplot(212)
-    ax.plot(learner.policy)
+    ax.plot(learner.policy, marker="o", linestyle="")
 
     fig.savefig("figure_4_3.png", dpi=100)
 
