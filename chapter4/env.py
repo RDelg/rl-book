@@ -170,9 +170,8 @@ class GamblerEnv(Enviroment):
     _coin_tail_prob = 1.0 - _coin_head_prob
     # Rewards
     _win_reward = 1.0
-    _base_action_reward = 0.0
 
-    def __init__(self, value: np.array, gamma: float = 0.7):
+    def __init__(self, value: np.array, gamma: float = 0.9):
         self.gamma = gamma
         self.value = value
         # Instantiate spaces to reduce allocations
@@ -195,19 +194,16 @@ class GamblerEnv(Enviroment):
 
     def dynamics(self, state: Tuple[int], action: int) -> float:
         # Tail case
-        new_tail_state = (state[0] - action,)
-        new_tail_idx = self.state_to_idx(new_tail_state)
         value = self._coin_tail_prob * (
-            self._base_action_reward + self.gamma * self.value[new_tail_idx]
+            self.gamma * self.value[self.state_to_idx((state[0] - action,))]
         )
         # Head case
         new_head_state = (state[0] + action,)
         if new_head_state[0] == 100:
             value += self._coin_head_prob * self._win_reward
         else:
-            new_head_idx = self.state_to_idx(new_head_state)
             value += self._coin_head_prob * (
-                self._base_action_reward + self.gamma * self.value[new_head_idx]
+                self.gamma * self.value[self.state_to_idx(new_head_state)]
             )
         return value
 
