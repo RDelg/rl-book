@@ -60,7 +60,7 @@ class DynamicPolicyLearner:
 
     def policy_evaluation(self, max_iters: int = 100):
         max_diff = np.inf
-        for _ in tqdm(range(max_iters), desc="Policy evaluation"):
+        for it in tqdm(range(max_iters), desc="Policy evaluation"):
             old_value = self.value.copy()
             with np.nditer(
                 [self.value, self.policy],
@@ -70,7 +70,7 @@ class DynamicPolicyLearner:
                 for val, pol in tqdm(
                     it,
                     total=self.value.size,
-                    desc=f"Policy evaluation sweep. Last max diff: {max_diff}",
+                    desc=f"Policy evaluation iter {it}. Last max diff: {max_diff}",
                     leave=False,
                 ):
                     val[...] = self.env.dynamics(

@@ -157,3 +157,55 @@ class RentalCarEnv(Enviroment):
                                 + self.gamma * self.value[new_state[0], new_state[1]]
                             )
         return value
+
+
+class GamblerEnv(Enviroment):
+    _coin_head_prob = 0.4
+    _coin_tail_prob = 1.0 - _coin_head_prob
+    # Rewards
+    _win_reward = 1.0
+    _base_action_reward = 0.0
+
+    def __init__(self, value: np.array, gamma: float = 0.7):
+        self.gamma = gamma
+        self.value = value
+        # Instantiate spaces to reduce allocations
+        self._obs_space = self.obs_space()
+        self._act_space = self.act_space()
+
+    @staticmethod
+    def obs_space() -> Space:
+        return Space([1], 1, 99, int)
+
+    @staticmethod
+    def act_space() -> Space:
+        return Space([1], 1, 99, int)
+
+    def idx_to_state(self, idx: Tuple[int]) -> Tuple[int]:
+        return (idx[0] + self._obs_space.min,)
+
+    def state_to_idx(self, state: Tuple[int]) -> Tuple[int]:
+        return (state[0] - self._obs_space.min,)
+
+    def dynamics(self, state: Tuple[int], action: int) -> float:
+        # Tail case
+        new_tail_state = (state[0] - action,)
+        new_tail_idx = self.state_to_idx(new_tail_state)
+        value = self._coin_tail_prob * (
+            self._base_action_reward + self.gamma * self.value[new_tail_idx]
+        )
+        # Head case
+        new_head_state = (state[0] + action,)
+        if new_head_state[0] == 100:
+            value += self._coin_head_prob * self._win_reward
+        else:
+            new_head_idx = self.state_to_idx(new_head_state)
+            value += self._coin_head_prob * (
+                self._base_action_reward + self.gamma * self.value[new_head_idx]
+            )
+        return value
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def legal_actions(state: Tuple[int]) -> np.array:
+        return np.arange(0, min(state[0], 100 - state[0]) + 1)

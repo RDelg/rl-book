@@ -4,7 +4,7 @@ from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
 
 from learner import DynamicPolicyLearner
-from env import RentalCarEnv
+from env import RentalCarEnv, GamblerEnv
 
 
 def figure_4_2():
@@ -88,5 +88,26 @@ def figure_4_2():
     fig.savefig("figure_4_2.png", dpi=100)
 
 
+def figure_4_3():
+    # Aggresive policy
+    initial_policy = np.array(
+        [GamblerEnv.legal_actions((i + 1,)).max() for i in range(99)]
+    )
+    learner = DynamicPolicyLearner(GamblerEnv, initial_policy=initial_policy)
+    learner.policy_evaluation(max_iters=10)
+    learner.policy_improvement()
+
+    fig = plt.figure(figsize=(12, 6))
+
+    ax = fig.add_subplot(211)
+    ax.plot(learner.value)
+
+    ax = fig.add_subplot(212)
+    ax.plot(learner.policy)
+
+    fig.savefig("figure_4_3.png", dpi=100)
+
+
 if __name__ == "__main__":
-    figure_4_2()
+    # figure_4_2()
+    figure_4_3()
