@@ -11,7 +11,7 @@ def figure_4_2():
     learner = DynamicPolicyLearner(RentalCarEnv, fixed_return=True)
 
     def plot_policy(
-        ax: plt.Axes = None,
+        ax: plt.Axes,
         title: str = "Value",
     ):
         img = np.flipud(learner.policy)
@@ -45,7 +45,7 @@ def figure_4_2():
         ax.set_title(title)
 
     def plot_value(
-        ax: plt.Axes = None,
+        ax: plt.Axes,
         title: str = "Value",
     ):
         x = np.arange(learner.obs_space_range)
@@ -95,20 +95,51 @@ def figure_4_3():
     )
 
     learner = DynamicPolicyLearner(GamblerEnv, eps=1e-12, initial_policy=initial_policy)
-    learner.policy_evaluation(max_iters=100)
-    learner.policy_improvement()
+
+    def plot_value(ax: plt.Axes):
+        ax.plot(np.arange(1, 100), learner.value)
+        xticks = [1, 25, 50, 75, 99]
+        yticks = np.round(np.linspace(0, 1, 6), 1)
+        ax.set_xticks(xticks)
+        ax.set_yticks(yticks)
+        ax.set_xticklabels(xticks)
+        ax.set_yticklabels(yticks)
+        ax.set_xlabel("Capital")
+        ax.set_ylabel("Value estimates")
+        ax.legend(
+            [f"sweep {s+1}" for s in range(max_plot_iter)] + ["Final function value"]
+        )
+
+    def plot_policy(ax: plt.Axes):
+        ax.step(np.arange(1, 100), learner.policy, where="mid")
+        xticks = [1, 25, 50, 75, 99]
+        yticks = [1] + [x * 10 for x in range(1, 6)]
+        ax.set_xticks(xticks)
+        ax.set_yticks(yticks)
+        ax.set_xticklabels(xticks)
+        ax.set_yticklabels(yticks)
+        ax.set_xlabel("Capital")
+        ax.set_ylabel("Final policy (stake)")
 
     fig = plt.figure(figsize=(12, 6))
 
+    # Plot value
     ax = fig.add_subplot(211)
-    ax.plot(learner.value)
+    max_plot_iter = 3
+    for i in range(30):
+        learner.policy_evaluation(max_iters=1)
+        if i < max_plot_iter:
+            plot_value(ax)
+    plot_value(ax)
 
+    # Plot policy
+    learner.policy_improvement()
     ax = fig.add_subplot(212)
-    ax.plot(learner.policy, marker="o", linestyle="")
+    plot_policy(ax)
 
     fig.savefig("figure_4_3.png", dpi=100)
 
 
 if __name__ == "__main__":
-    figure_4_2()
+    # figure_4_2()
     figure_4_3()
