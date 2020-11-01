@@ -46,7 +46,21 @@ class Space:
 
 class Enviroment(metaclass=ABCMeta):
     """Abstract class that represents an enviroment to use in a dynamic
-    programming learner."""
+    programming learner.
+
+    Parameters
+    ----------
+
+    gamma : float, default=0.9
+        Gamma value to use when calculating the returns.
+
+    """
+
+    def __init__(self, gamma: float):
+        self.gamma = gamma
+        # Instantiate spaces to reduce allocations
+        self._obs_space = self.obs_space()
+        self._act_space = self.act_space()
 
     @abstractmethod
     def dynamics(self, *args, **kwargs) -> float:
@@ -103,16 +117,13 @@ class RentalCarEnv(Enviroment):
     _rental_reward = 10
 
     def __init__(self, gamma: float = 0.9, fixed_return: bool = True):
-        self.gamma = gamma
+        super().__init__(gamma)
         self.fixed_return = fixed_return
         # PMFs
         self._return_a_pmf = poisson.pmf(range(self._poisson_range), self._lam_in_a)
         self._request_a_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_a)
         self._return_b_pmf = poisson.pmf(range(self._poisson_range), self._lam_in_b)
         self._request_b_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_b)
-        # Instantiate spaces to reduce allocations
-        self._obs_space = self.obs_space()
-        self._act_space = self.act_space()
 
     def idx_to_state(self, idx: Tuple[int, int]) -> Tuple[int, int]:
         return idx
@@ -255,10 +266,7 @@ class GamblerEnv(Enviroment):
     _win_reward = 1.0
 
     def __init__(self, gamma: float = 1.0):
-        self.gamma = gamma
-        # Instantiate spaces to reduce allocations
-        self._obs_space = self.obs_space()
-        self._act_space = self.act_space()
+        super().__init__(gamma)
 
     @staticmethod
     def obs_space() -> Space:
