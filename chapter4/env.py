@@ -141,16 +141,17 @@ class RentalCarEnv(Enviroment):
                 else:
                     for return_a in range(self._poisson_range):
                         return_a_prob = self._return_a[return_a]
+                        state_a = np.min(
+                            [
+                                state[0] - real_request_a + return_a,
+                                self._obs_space.max,
+                            ]
+                        )
                         for return_b in range(self._poisson_range):
                             return_b_prob = self._return_b[return_b]
                             _prob = prob * return_a_prob * return_b_prob
                             new_state = (
-                                np.min(
-                                    [
-                                        state[0] - real_request_a + return_a,
-                                        self._obs_space.max,
-                                    ]
-                                ),
+                                state_a,
                                 np.min(
                                     [
                                         state[1] - real_request_b + return_b,
