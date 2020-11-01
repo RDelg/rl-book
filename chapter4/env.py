@@ -51,7 +51,7 @@ class Enviroment(metaclass=ABCMeta):
     Parameters
     ----------
 
-    gamma : float, default=0.9
+    gamma : float
         Gamma value to use when calculating the returns.
 
     """
