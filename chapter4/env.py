@@ -100,8 +100,8 @@ class RentalCarEnv(Enviroment):
         Gamma value to use when calculating the returns.
 
     fixed_return : bool, default=True
-        If True, then always the returned cars are always equal to the lambda values.
-        If False, then the dynamics are calculated on the returns also.
+        If True, then the returned cars are always equal to the lambda values.
+        If False, then the dynamics are calculated on the returns pmf.
 
     """
 
