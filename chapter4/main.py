@@ -8,7 +8,8 @@ from env import RentalCarEnv, GamblerEnv
 
 
 def figure_4_2():
-    learner = DynamicPolicyLearner(RentalCarEnv, fixed_return=True)
+    env = RentalCarEnv(fixed_return=False)
+    learner = DynamicPolicyLearner(env)
 
     def plot_policy(
         ax: plt.Axes,
@@ -94,7 +95,8 @@ def figure_4_3():
         [GamblerEnv.legal_actions((i + 1,)).max() for i in range(99)]
     )
 
-    learner = DynamicPolicyLearner(GamblerEnv, eps=1e-12, initial_policy=initial_policy)
+    env = GamblerEnv()
+    learner = DynamicPolicyLearner(env, eps=1e-12, initial_policy=initial_policy)
 
     def plot_value(ax: plt.Axes):
         ax.plot(np.arange(1, 100), learner.value)

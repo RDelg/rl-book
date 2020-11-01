@@ -13,7 +13,7 @@ class DynamicPolicyLearner:
     Parameters
     ----------
 
-    env : Enviroment class
+    env : Enviroment
         Enviroment from where the value and policy will be estimated.
 
     eps : float, default=1e-3
@@ -28,10 +28,9 @@ class DynamicPolicyLearner:
 
     def __init__(
         self,
-        env: Type[Enviroment],
+        env: Enviroment,
         eps: float = 1e-3,
         initial_policy: Optional[np.array] = None,
-        **env_kwargs,
     ):
         assert (
             len(env.obs_space().dims) == 1
@@ -46,8 +45,8 @@ class DynamicPolicyLearner:
             self.obs_space_range for _ in range(env.obs_space().dims[0])
         ]
         self._eps = eps
-        self._env_cls = env
-        self.reset(initial_policy, **env_kwargs)
+        self._env = env
+        self.reset(initial_policy)
 
     def reset(self, initial_policy: Optional[np.array] = None, **env_kwargs):
         """
@@ -61,7 +60,6 @@ class DynamicPolicyLearner:
             self.policy = initial_policy.copy()
         else:
             self.policy = np.zeros(shape=self.obs_space_shape, dtype=np.int32)
-        self.env = self._env_cls(self.value, **env_kwargs)
 
     def policy_improvement(self):
         """Performs the policy improvement algorithm"""
@@ -71,11 +69,11 @@ class DynamicPolicyLearner:
         ) as it:
             for pol in tqdm(it, desc="Policy improvement", total=self.policy.size):
                 old_action = np.int32(pol)
-                state = self.env.idx_to_state(it.multi_index)
-                actions = self.env.legal_actions(state)
+                state = self._env.idx_to_state(it.multi_index)
+                actions = self._env.legal_actions(state)
                 q = np.zeros_like(actions, dtype=np.float32)
                 for a, action in enumerate(actions):
-                    q[a] = self.env.dynamics(state, action)
+                    q[a] = self._env.dynamics(self.value, state, action)
                 pol[...] = actions[np.argmax(q)]
                 if np.int32(pol) != old_action:
                     stable = False
@@ -99,8 +97,8 @@ class DynamicPolicyLearner:
                     desc=f"Policy evaluation iter {i}. Last max diff: {max_diff}",
                     leave=False,
                 ):
-                    val[...] = self.env.dynamics(
-                        self.env.idx_to_state(it.multi_index), pol
+                    val[...] = self._env.dynamics(
+                        self.value, self._env.idx_to_state(it.multi_index), pol
                     )
             max_diff = np.max(np.abs(self.value - old_value))
             if max_diff < self._eps:
@@ -124,11 +122,11 @@ class DynamicPolicyLearner:
                     desc=f"Value iteration iter {i}. Last delta {last_delta}",
                     leave=False,
                 ):
-                    state = self.env.idx_to_state(it.multi_index)
-                    actions = self.env.legal_actions(state)
+                    state = self._env.idx_to_state(it.multi_index)
+                    actions = self._env.legal_actions(state)
                     q = np.zeros_like(actions, dtype=np.float32)
                     for a, action in enumerate(actions):
-                        q[a] += self.env.dynamics(state, action)
+                        q[a] += self._env.dynamics(self.value, state, action)
                     new_value = np.max(q)
                     delta += np.abs(val[...] - new_value)
                     val[...] = new_value

@@ -66,10 +66,9 @@ class RentalCarEnv(Enviroment):
     _move_reward = -2
     _rental_reward = 10
 
-    def __init__(self, value: np.array, gamma=0.9, fixed_return=True):
+    def __init__(self, gamma: float = 0.9, fixed_return: bool = True):
         self.gamma = gamma
         self.fixed_return = fixed_return
-        self.value = value
         # PMFs
         self._return_a = poisson.pmf(range(self._poisson_range), self._lam_in_a)
         self._request_a = poisson.pmf(range(self._poisson_range), self._lam_out_a)
@@ -103,7 +102,9 @@ class RentalCarEnv(Enviroment):
             dtype=np.int32,
         )
 
-    def dynamics(self, state: Tuple[int, int], action: int) -> float:
+    def dynamics(
+        self, estimated_value: np.array, state: Tuple[int, int], action: int
+    ) -> float:
         value = 0.0
         reward_base = np.abs(action) * np.float32(self._move_reward)
         state = list(state)
@@ -136,7 +137,8 @@ class RentalCarEnv(Enviroment):
                         ),
                     )
                     value += prob * (
-                        reward + self.gamma * self.value[new_state[0], new_state[1]]
+                        reward
+                        + self.gamma * estimated_value[new_state[0], new_state[1]]
                     )
                 else:
                     for return_a in range(self._poisson_range):
@@ -161,7 +163,8 @@ class RentalCarEnv(Enviroment):
                             )
                             value += _prob * (
                                 reward
-                                + self.gamma * self.value[new_state[0], new_state[1]]
+                                + self.gamma
+                                * estimated_value[new_state[0], new_state[1]]
                             )
         return value
 
@@ -171,9 +174,8 @@ class GamblerEnv(Enviroment):
     # Rewards
     _win_reward = 1.0
 
-    def __init__(self, value: np.array, gamma: float = 1.0):
+    def __init__(self, gamma: float = 1.0):
         self.gamma = gamma
-        self.value = value
         # Instantiate spaces to reduce allocations
         self._obs_space = self.obs_space()
         self._act_space = self.act_space()
@@ -192,20 +194,24 @@ class GamblerEnv(Enviroment):
     def state_to_idx(self, state: Tuple[int]) -> Tuple[int]:
         return (state[0] - self._obs_space.min,)
 
-    def dynamics(self, state: Tuple[int], action: int) -> float:
+    def dynamics(
+        self, estimated_value: np.array, state: Tuple[int], action: int
+    ) -> float:
         # Tail case
         new_head_idx = self.state_to_idx((state[0] - action,))
         if new_head_idx[0] < 0:
             ret = 0.0
         else:
-            ret = (1.0 - self._coin_head_prob) * (self.gamma * self.value[new_head_idx])
+            ret = (1.0 - self._coin_head_prob) * (
+                self.gamma * estimated_value[new_head_idx]
+            )
         # Head case
         new_head_state = (state[0] + action,)
         if new_head_state[0] == 100:
             ret += self._coin_head_prob * self._win_reward
         else:
             ret += self._coin_head_prob * (
-                self.gamma * self.value[self.state_to_idx(new_head_state)]
+                self.gamma * estimated_value[self.state_to_idx(new_head_state)]
             )
         return ret
 
