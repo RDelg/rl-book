@@ -3,6 +3,7 @@ from functools import lru_cache
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
+from numba import jit
 from scipy.stats import poisson
 
 
@@ -86,7 +87,7 @@ class RentalCarEnv(Enviroment):
 
     fixed_return : bool, default=True
         If True, then always the returned cars are always equal to the lambda values.
-        If False, then the dynamic is calculated on the returns also (slow computation).
+        If False, then the dynamics are calculated on the returns also.
 
     """
 
@@ -105,10 +106,10 @@ class RentalCarEnv(Enviroment):
         self.gamma = gamma
         self.fixed_return = fixed_return
         # PMFs
-        self._return_a = poisson.pmf(range(self._poisson_range), self._lam_in_a)
-        self._request_a = poisson.pmf(range(self._poisson_range), self._lam_out_a)
-        self._return_b = poisson.pmf(range(self._poisson_range), self._lam_in_b)
-        self._request_b = poisson.pmf(range(self._poisson_range), self._lam_out_b)
+        self._return_a_pmf = poisson.pmf(range(self._poisson_range), self._lam_in_a)
+        self._request_a_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_a)
+        self._return_b_pmf = poisson.pmf(range(self._poisson_range), self._lam_in_b)
+        self._request_b_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_b)
         # Instantiate spaces to reduce allocations
         self._obs_space = self.obs_space()
         self._act_space = self.act_space()
@@ -137,71 +138,105 @@ class RentalCarEnv(Enviroment):
             dtype=np.int32,
         )
 
-    def dynamics(
-        self, estimated_value: np.array, state: Tuple[int, int], action: int
+    @staticmethod
+    @jit(nopython=True)
+    def _dynamics(
+        estimated_value: np.array,
+        state: Tuple[int, int],
+        action: int,
+        move_reward: int,
+        rental_reward: int,
+        poisson_range: int,
+        request_a_pmf: np.array,
+        request_b_pmf: np.array,
+        return_a_pmf: np.array,
+        return_b_pmf: np.array,
+        lam_in_a: int,
+        lam_in_b: int,
+        obs_space_max: int,
+        fixed_return: bool,
+        gamma: float,
     ) -> float:
         value = 0.0
-        reward_base = np.abs(action) * np.float32(self._move_reward)
-        state = list(state)
-        state[0] -= action
-        state[1] += action
+        reward_base = np.abs(action) * move_reward
+        state_a = np.int32(state[0] - action)
+        state_b = np.int32(state[1] + action)
 
-        for request_a in range(self._poisson_range):
-            request_a_prob = self._request_a[request_a]
-            for request_b in range(self._poisson_range):
-                request_b_prob = self._request_b[request_b]
+        for request_a in range(poisson_range):
+            request_a_prob = request_a_pmf[request_a]
+            for request_b in range(poisson_range):
+                request_b_prob = request_b_pmf[request_b]
 
-                real_request_a = np.min([request_a, state[0]])
-                real_request_b = np.min([request_b, state[1]])
+                real_request_a = np.array([request_a, state_a]).min()
+                real_request_b = np.array([request_b, state_b]).min()
 
-                reward = reward_base + np.float32(self._rental_reward) * (
+                reward = reward_base + np.float32(rental_reward) * (
                     real_request_a + real_request_b
                 )
 
                 prob = request_a_prob * request_b_prob
 
-                if self.fixed_return:
-                    return_a = self._lam_in_a
-                    return_b = self._lam_in_b
+                if fixed_return:
+                    return_a = lam_in_a
+                    return_b = lam_in_b
                     new_state = (
-                        np.min(
-                            [state[0] - real_request_a + return_a, self._obs_space.max]
-                        ),
-                        np.min(
-                            [state[1] - real_request_b + return_b, self._obs_space.max]
-                        ),
+                        np.array(
+                            [state_a - real_request_a + return_a, obs_space_max]
+                        ).min(),
+                        np.array(
+                            [state_b - real_request_b + return_b, obs_space_max]
+                        ).min(),
                     )
                     value += prob * (
-                        reward
-                        + self.gamma * estimated_value[new_state[0], new_state[1]]
+                        reward + gamma * estimated_value[new_state[0], new_state[1]]
                     )
                 else:
-                    for return_a in range(self._poisson_range):
-                        return_a_prob = self._return_a[return_a]
-                        state_a = np.min(
+                    for return_a in range(poisson_range):
+                        return_a_prob = return_a_pmf[return_a]
+                        new_state_a = np.array(
                             [
-                                state[0] - real_request_a + return_a,
-                                self._obs_space.max,
+                                state_a - real_request_a + return_a,
+                                obs_space_max,
                             ]
-                        )
-                        for return_b in range(self._poisson_range):
-                            return_b_prob = self._return_b[return_b]
+                        ).min()
+                        for return_b in range(poisson_range):
+                            return_b_prob = return_b_pmf[return_b]
                             _prob = prob * return_a_prob * return_b_prob
                             new_state = (
-                                state_a,
-                                np.min(
+                                new_state_a,
+                                np.array(
                                     [
-                                        state[1] - real_request_b + return_b,
-                                        self._obs_space.max,
+                                        state_b - real_request_b + return_b,
+                                        obs_space_max,
                                     ]
-                                ),
+                                ).min(),
                             )
                             value += _prob * (
                                 reward
-                                + self.gamma
-                                * estimated_value[new_state[0], new_state[1]]
+                                + gamma * estimated_value[new_state[0], new_state[1]]
                             )
         return value
+
+    def dynamics(
+        self, estimated_value: np.array, state: Tuple[int, int], action: int
+    ) -> float:
+        return self._dynamics(
+            estimated_value,
+            state,
+            action,
+            self._move_reward,
+            self._rental_reward,
+            self._poisson_range,
+            self._request_a_pmf,
+            self._request_b_pmf,
+            self._return_a_pmf,
+            self._return_b_pmf,
+            self._lam_in_a,
+            self._lam_in_b,
+            self._obs_space.max,
+            self.fixed_return,
+            self.gamma,
+        )
 
 
 class GamblerEnv(Enviroment):
