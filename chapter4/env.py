@@ -7,6 +7,24 @@ from scipy.stats import poisson
 
 
 class Space:
+    """Bounded space to represent the action and
+    observation spaces of an enviroment.
+
+    Parameters
+    ----------
+
+    dims : list of ints
+        Dimentions that the space have.
+
+    min : float
+        minimum value that the space could have.
+
+    max : float
+        maximum value that the space could have.
+
+    dtype: type
+        data type of the space."""
+
     def __init__(self, dims: List[int], min: float, max: float, dtype: Type[int]):
         self._dims = dims
         self._min = dtype(min)
@@ -26,6 +44,9 @@ class Space:
 
 
 class Enviroment(metaclass=ABCMeta):
+    """Abstract class that represents an enviroment to use in a dynamic
+    programming learner."""
+
     @abstractmethod
     def dynamics(self, *args, **kwargs) -> float:
         raise NotImplementedError
@@ -55,6 +76,20 @@ class Enviroment(metaclass=ABCMeta):
 
 
 class RentalCarEnv(Enviroment):
+    """Rental car enviroment.
+
+    Parameters
+    ----------
+
+    gamma : float, default=0.9
+        Gamma value to use when calculating the returns.
+
+    fixed_return : bool, default=True
+        If True, then always the returned cars are always equal to the lambda values.
+        If False, then the dynamic is calculated on the returns also (slow computation).
+
+    """
+
     # How many values of the Poisson distributtion use to calculate the dynamics
     _poisson_range = 11
     # Rental car lambdas
@@ -170,6 +205,16 @@ class RentalCarEnv(Enviroment):
 
 
 class GamblerEnv(Enviroment):
+    """Gambler enviroment.
+
+    Parameters
+    ----------
+
+    gamma : float, default=1.0
+        Gamma value to use when calculating the returns.
+
+    """
+
     _coin_head_prob = 0.4
     # Rewards
     _win_reward = 1.0
