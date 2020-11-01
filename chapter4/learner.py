@@ -7,10 +7,29 @@ from env import Enviroment
 
 
 class DynamicPolicyLearner:
+    """
+    Dynamic programming learner.
+
+    Parameters
+    ----------
+
+    env : Enviroment class
+        Enviroment from where the value and policy will be estimated.
+
+    eps : float, default=1e-3
+        Epsilon value to use to check the improvement in policy_evaluation
+        and value_iteration methods.
+
+    initial_policy: Optional numpy array, default=None
+        Initial policy that the leraner will use. If none a zero initializated
+        policy will be used.
+
+    """
+
     def __init__(
         self,
         env: Type[Enviroment],
-        eps: float = 0.001,
+        eps: float = 1e-3,
         initial_policy: Optional[np.array] = None,
         **env_kwargs,
     ):
@@ -30,7 +49,10 @@ class DynamicPolicyLearner:
         self._env_cls = env
         self.reset(initial_policy, **env_kwargs)
 
-    def reset(self, initial_policy, **env_kwargs):
+    def reset(self, initial_policy: Optional[np.array] = None, **env_kwargs):
+        """
+        Resets the learner value and policy matrixes.
+        """
         self.value = np.zeros(shape=self.obs_space_shape)
         if initial_policy is not None:
             assert all(
@@ -42,6 +64,7 @@ class DynamicPolicyLearner:
         self.env = self._env_cls(self.value, **env_kwargs)
 
     def policy_improvement(self):
+        """Performs the policy improvement algorithm"""
         stable = True
         with np.nditer(
             [self.policy], flags=["multi_index"], op_flags=[["readwrite"]]
@@ -59,6 +82,9 @@ class DynamicPolicyLearner:
         return stable
 
     def policy_evaluation(self, max_iters: int = 100):
+        """Performs a policy evaluation algorithm sweep until it converge or reach
+        the max_iter iterations.
+        """
         max_diff = np.inf
         for i in tqdm(range(max_iters), desc="Policy evaluation"):
             old_value = self.value.copy()
@@ -81,6 +107,9 @@ class DynamicPolicyLearner:
                 break
 
     def value_iteration(self, max_iters: int = 100):
+        """Performs a value iteration algorithm sweep until it converge or reach
+        the max_iter iterations.
+        """
         last_delta = np.inf
         for i in tqdm(range(max_iters), desc="Value iteration"):
             delta = 0
