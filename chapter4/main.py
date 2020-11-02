@@ -22,7 +22,15 @@ def figure_4_1():
         width, height = 1.0 / ncols, 1.0 / nrows
 
         for (i, j), val in np.ndenumerate(rounded_value):
-            tb.add_cell(i, j, width, height, text=val, loc="center", facecolor="white")
+            tb.add_cell(
+                i,
+                j,
+                width,
+                height,
+                val,
+                loc="center",
+                facecolor="white",
+            )
 
         for i in range(len(rounded_value)):
             tb.add_cell(
@@ -48,8 +56,7 @@ def figure_4_1():
 
         ax.add_table(tb)
 
-    learner.value_iteration()
-    # learner.policy_improvement()
+    learner.value_iteration(max_iters=1)
 
     fig = plt.figure(figsize=(12, 12))
 

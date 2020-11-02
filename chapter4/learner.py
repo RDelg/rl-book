@@ -111,6 +111,7 @@ class DynamicPolicyLearner:
         last_delta = np.inf
         for i in tqdm(range(max_iters), desc="Value iteration"):
             delta = 0
+            old_value = self.value.copy()
             with np.nditer(
                 [self.value],
                 flags=["multi_index"],
@@ -126,8 +127,8 @@ class DynamicPolicyLearner:
                     actions = self._env.legal_actions(state)
                     q = np.zeros_like(actions, dtype=np.float32)
                     for a, action in enumerate(actions):
-                        q[a] += self._env.dynamics(self.value, state, action)
-                    new_value = np.max(q)
+                        q[a] = self._env.dynamics(old_value, state, action)
+                    new_value = np.mean(q)
                     delta += np.abs(val[...] - new_value)
                     val[...] = new_value
             last_delta = delta

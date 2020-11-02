@@ -327,9 +327,8 @@ class GridEnv(Enviroment):
         np.array([0, -1]),
         np.array([0, 1]),
     ]
-    _win_states = [(0, 0), (3, 3)]
+    _terminal_states = [(0, 0), (3, 3)]
     # Rewards
-    _win_reward = 0.0
     _step_reward = -1.0
 
     def __init__(self, gamma: float = 1.0):
@@ -352,6 +351,10 @@ class GridEnv(Enviroment):
     def dynamics(
         self, estimated_value: np.ndarray, state: Tuple[int, int], action: int
     ) -> float:
+        for terminal_state in self._terminal_states:
+            if terminal_state == state:
+                return 0
+
         new_state = np.array(state) + self._actions[action]
         if (
             new_state[0] < 0
@@ -361,12 +364,10 @@ class GridEnv(Enviroment):
         ):
             new_state = np.array(state)
 
-        reward = self._step_reward
-        for win_state in self._win_states:
-            if (new_state == win_state).all():
-                reward = self._win_reward
-
-        ret = reward + self.gamma * estimated_value[self.state_to_idx(tuple(new_state))]
+        ret = (
+            self._step_reward
+            + self.gamma * estimated_value[self.state_to_idx(tuple(new_state))]
+        )
 
         return ret
 
