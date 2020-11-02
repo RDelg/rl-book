@@ -30,7 +30,7 @@ class DynamicPolicyLearner:
         self,
         env: Enviroment,
         eps: float = 1e-3,
-        initial_policy: Optional[np.array] = None,
+        initial_policy: Optional[np.ndarray] = None,
     ):
         assert (
             len(env.obs_space().dims) == 1
@@ -48,7 +48,7 @@ class DynamicPolicyLearner:
         self._env = env
         self.reset(initial_policy)
 
-    def reset(self, initial_policy: Optional[np.array] = None, **env_kwargs):
+    def reset(self, initial_policy: Optional[np.ndarray] = None, **env_kwargs):
         """
         Resets the learner value and policy matrices.
         """

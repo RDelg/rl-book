@@ -68,7 +68,7 @@ class Enviroment(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def legal_actions(self, *args, **kwargs) -> np.array:
+    def legal_actions(self, *args, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
     @staticmethod
@@ -141,7 +141,7 @@ class RentalCarEnv(Enviroment):
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def legal_actions(state: Tuple[int, int]) -> np.array:
+    def legal_actions(state: Tuple[int, int]) -> np.ndarray:
         return np.arange(
             np.max([-state[1], RentalCarEnv.act_space().min]),
             np.min([state[0], RentalCarEnv.act_space().max]) + 1,
@@ -152,16 +152,16 @@ class RentalCarEnv(Enviroment):
     @staticmethod
     @jit(nopython=True)
     def _dynamics(
-        estimated_value: np.array,
+        estimated_value: np.ndarray,
         state: Tuple[int, int],
         action: int,
         move_reward: int,
         rental_reward: int,
         poisson_range: int,
-        request_a_pmf: np.array,
-        request_b_pmf: np.array,
-        return_a_pmf: np.array,
-        return_b_pmf: np.array,
+        request_a_pmf: np.ndarray,
+        request_b_pmf: np.ndarray,
+        return_a_pmf: np.ndarray,
+        return_b_pmf: np.ndarray,
         lam_in_a: int,
         lam_in_b: int,
         obs_space_max: int,
@@ -229,7 +229,7 @@ class RentalCarEnv(Enviroment):
         return value
 
     def dynamics(
-        self, estimated_value: np.array, state: Tuple[int, int], action: int
+        self, estimated_value: np.ndarray, state: Tuple[int, int], action: int
     ) -> float:
         return self._dynamics(
             estimated_value,
@@ -283,7 +283,7 @@ class GamblerEnv(Enviroment):
         return (state[0] - self._obs_space.min,)
 
     def dynamics(
-        self, estimated_value: np.array, state: Tuple[int], action: int
+        self, estimated_value: np.ndarray, state: Tuple[int], action: int
     ) -> float:
         # Tail case
         new_head_idx = self.state_to_idx((state[0] - action,))
@@ -305,7 +305,7 @@ class GamblerEnv(Enviroment):
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def legal_actions(state: Tuple[int]) -> np.array:
+    def legal_actions(state: Tuple[int]) -> np.ndarray:
         return np.arange(1, min(state[0], 100 - state[0]) + 1)
 
 
@@ -315,7 +315,7 @@ class GridEnv(Enviroment):
     Parameters
     ----------
 
-    gamma : float, default=0.9
+    gamma : float, default=1.0
         Gamma value to use when calculating the returns.
 
     """
@@ -332,7 +332,7 @@ class GridEnv(Enviroment):
     _win_reward = 0.0
     _step_reward = -1.0
 
-    def __init__(self, gamma: float = 0.9):
+    def __init__(self, gamma: float = 1.0):
         super().__init__(gamma)
 
     @staticmethod
@@ -350,7 +350,7 @@ class GridEnv(Enviroment):
         return state
 
     def dynamics(
-        self, estimated_value: np.array, state: Tuple[int, int], action: int
+        self, estimated_value: np.ndarray, state: Tuple[int, int], action: int
     ) -> float:
         new_state = np.array(state) + self._actions[action]
         if (
@@ -372,5 +372,5 @@ class GridEnv(Enviroment):
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def legal_actions(state: Tuple[int, int]) -> np.array:
+    def legal_actions(state: Tuple[int, int]) -> np.ndarray:
         return np.arange(GridEnv.act_space().max + 1, dtype=np.int32)

@@ -48,8 +48,8 @@ def figure_4_1():
 
         ax.add_table(tb)
 
-    learner.policy_evaluation()
-    learner.policy_improvement()
+    learner.value_iteration()
+    # learner.policy_improvement()
 
     fig = plt.figure(figsize=(12, 12))
 
