@@ -1,10 +1,62 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.table import Table
 from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
 
 from learner import DynamicPolicyLearner
-from env import RentalCarEnv, GamblerEnv
+from env import GridEnv, RentalCarEnv, GamblerEnv
+
+
+def figure_4_1():
+
+    env = GridEnv()
+    learner = DynamicPolicyLearner(env)
+
+    def plot_value(ax: plt.Axes):
+        rounded_value = np.round(learner.value, decimals=2)
+        ax.set_axis_off()
+        tb = Table(ax, bbox=[0, 0, 1, 1])
+
+        nrows, ncols = rounded_value.shape
+        width, height = 1.0 / ncols, 1.0 / nrows
+
+        for (i, j), val in np.ndenumerate(rounded_value):
+            tb.add_cell(i, j, width, height, text=val, loc="center", facecolor="white")
+
+        for i in range(len(rounded_value)):
+            tb.add_cell(
+                i,
+                -1,
+                width,
+                height,
+                text=i + 1,
+                loc="right",
+                edgecolor="none",
+                facecolor="none",
+            )
+            tb.add_cell(
+                -1,
+                i,
+                width,
+                height / 2,
+                text=i + 1,
+                loc="center",
+                edgecolor="none",
+                facecolor="none",
+            )
+
+        ax.add_table(tb)
+
+    learner.policy_evaluation()
+    learner.policy_improvement()
+
+    fig = plt.figure(figsize=(12, 12))
+
+    # Plot value
+    ax = fig.add_subplot(111)
+    plot_value(ax)
+    fig.savefig("figure_4_1.png", dpi=100)
 
 
 def figure_4_2():
@@ -143,5 +195,6 @@ def figure_4_3():
 
 
 if __name__ == "__main__":
-    figure_4_2()
-    figure_4_3()
+    figure_4_1()
+    # figure_4_2()
+    # figure_4_3()

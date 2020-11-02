@@ -307,3 +307,70 @@ class GamblerEnv(Enviroment):
     @lru_cache(maxsize=None)
     def legal_actions(state: Tuple[int]) -> np.array:
         return np.arange(1, min(state[0], 100 - state[0]) + 1)
+
+
+class GridEnv(Enviroment):
+    """Grid 2D enviroment.
+
+    Parameters
+    ----------
+
+    gamma : float, default=0.9
+        Gamma value to use when calculating the returns.
+
+    """
+
+    _shape = (4, 4)
+    _actions = [
+        np.array([-1, 0]),
+        np.array([1, 0]),
+        np.array([0, -1]),
+        np.array([0, 1]),
+    ]
+    _win_states = [(0, 0), (3, 3)]
+    # Rewards
+    _win_reward = 0.0
+    _step_reward = -1.0
+
+    def __init__(self, gamma: float = 0.9):
+        super().__init__(gamma)
+
+    @staticmethod
+    def obs_space() -> Space:
+        return Space([2], 0, 3, int)
+
+    @staticmethod
+    def act_space() -> Space:
+        return Space([1], 0, 3, int)
+
+    def idx_to_state(self, idx: Tuple[int, int]) -> Tuple[int, int]:
+        return idx
+
+    def state_to_idx(self, state: Tuple[int, int]) -> Tuple[int, int]:
+        return state
+
+    def dynamics(
+        self, estimated_value: np.array, state: Tuple[int, int], action: int
+    ) -> float:
+        new_state = np.array(state) + self._actions[action]
+        if (
+            new_state[0] < 0
+            or new_state[0] >= self._shape[0]
+            or new_state[1] < 0
+            or new_state[1] >= self._shape[1]
+        ):
+            new_state = np.array(state)
+
+        reward = self._step_reward
+        for win_state in self._win_states:
+            if (new_state == win_state).all():
+                reward = self._win_reward
+
+        ret = reward + self.gamma * estimated_value[self.state_to_idx(tuple(new_state))]
+
+        return ret
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def legal_actions(state: Tuple[int, int]) -> np.array:
+        return np.arange(GridEnv.act_space().max + 1, dtype=np.int32)
