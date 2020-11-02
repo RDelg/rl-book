@@ -50,7 +50,7 @@ class DynamicPolicyLearner:
 
     def reset(self, initial_policy: Optional[np.array] = None, **env_kwargs):
         """
-        Resets the learner value and policy matrixes.
+        Resets the learner value and policy matrices.
         """
         self.value = np.zeros(shape=self.obs_space_shape)
         if initial_policy is not None:
