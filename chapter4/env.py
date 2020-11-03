@@ -348,25 +348,35 @@ class GridEnv(Enviroment):
     def state_to_idx(self, state: Tuple[int, int]) -> Tuple[int, int]:
         return state
 
-    def dynamics(
-        self, estimated_value: np.ndarray, state: Tuple[int, int], action: int
-    ) -> float:
+    def is_terminal(self, state: Tuple[int, int]) -> bool:
         for terminal_state in self._terminal_states:
             if terminal_state == state:
-                return 0
+                return True
+        return False
 
-        new_state = np.array(state) + self._actions[action]
+    def step(self, state: Tuple[int, int], action: int) -> Tuple[int, int]:
+        new_state = tuple(np.array(state) + self._actions[action])
         if (
             new_state[0] < 0
             or new_state[0] >= self._shape[0]
             or new_state[1] < 0
             or new_state[1] >= self._shape[1]
         ):
-            new_state = np.array(state)
+            new_state = state
+
+        return new_state
+
+    def dynamics(
+        self, estimated_value: np.ndarray, state: Tuple[int, int], action: int
+    ) -> float:
+        if self.is_terminal(state):
+            return 0
+
+        new_state = self.step(state, action)
 
         ret = (
             self._step_reward
-            + self.gamma * estimated_value[self.state_to_idx(tuple(new_state))]
+            + self.gamma * estimated_value[self.state_to_idx(new_state)]
         )
 
         return ret

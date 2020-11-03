@@ -14,7 +14,7 @@ def figure_4_1():
     learner = DynamicPolicyLearner(env)
 
     def plot_value(ax: plt.Axes):
-        rounded_value = np.round(learner.value, decimals=2)
+        rounded_value = np.round(learner.value, decimals=1)
         ax.set_axis_off()
         tb = Table(ax, bbox=[0, 0, 1, 1])
 
@@ -22,47 +22,98 @@ def figure_4_1():
         width, height = 1.0 / ncols, 1.0 / nrows
 
         for (i, j), val in np.ndenumerate(rounded_value):
-            tb.add_cell(
-                i,
-                j,
-                width,
-                height,
-                val,
-                loc="center",
-                facecolor="white",
-            )
-
-        for i in range(len(rounded_value)):
-            tb.add_cell(
-                i,
-                -1,
-                width,
-                height,
-                text=i + 1,
-                loc="right",
-                edgecolor="none",
-                facecolor="none",
-            )
-            tb.add_cell(
-                -1,
-                i,
-                width,
-                height / 2,
-                text=i + 1,
-                loc="center",
-                edgecolor="none",
-                facecolor="none",
-            )
+            tb.add_cell(i, j, width, height, text=val, loc="center", facecolor="white")
 
         ax.add_table(tb)
 
-    learner.value_iteration(max_iters=1)
+    def add_arrow(ax, x, y, direction, shape):
+        x_step, y_step = 1 / shape[0], 1 / shape[1]
+        new_x, new_y = x_step * x + x_step / 2, 1 - y_step * y - y_step / 2
 
-    fig = plt.figure(figsize=(12, 12))
+        head_length = 0.05
+        if direction == 0:
+            dx, dy = -(x_step / 2 - head_length), 0.0
+        elif direction == 1:
+            dx, dy = x_step / 2 - head_length, 0.0
+        elif direction == 2:
+            dx, dy = 0.0, y_step / 2 - head_length
+        elif direction == 3:
+            dx, dy = 0.0, -(y_step / 2 - head_length)
+        else:
+            raise ValueError("Invalid direction")
+
+        ax.arrow(
+            x=new_x,
+            y=new_y,
+            dx=dx,
+            dy=dy,
+            head_width=0.02,
+            head_length=head_length,
+            width=0.003,
+            fc="k",
+            ec="k",
+        )
+
+    def plot_policy(ax: plt.Axes):
+        ax.set_axis_off()
+        tb = Table(ax, bbox=[0, 0, 1, 1])
+
+        nrows, ncols = learner.value.shape
+        width, height = 1.0 / ncols, 1.0 / nrows
+
+        for (i, j) in np.ndindex(learner.value.shape):
+            tb.add_cell(i, j, width, height)
+
+        ax.add_table(tb)
+
+        for idx in np.ndindex(learner.value.shape):
+            if env.is_terminal(idx):
+                continue
+            actions = GridEnv.legal_actions(idx)
+            returns = np.zeros_like(actions, dtype=np.float32)
+            for i, action in np.ndenumerate(actions):
+                new_state = env.step(idx, action)
+                returns[i] = learner.value[new_state]
+
+            for a in np.where(returns >= returns.max())[0]:
+                add_arrow(ax, idx[0], idx[1], a, learner.value.shape)
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+
+    fig = plt.figure(figsize=(12, 36))
+
+    def add_k_text(ax, text):
+        ax.text(-0.2, 0.5, text, fontsize=12)
+
+    ax = fig.add_subplot(621)
+    plot_value(ax)
+    ax.set_title("$v_{k}$ for the random policy")
+    add_k_text(ax, "$k=0$")
+
+    ax = fig.add_subplot(622)
+    plot_policy(ax)
+    ax.set_title("greedy policy w.r.t $v_{k}$")
 
     # Plot value
-    ax = fig.add_subplot(111)
+    plot_ks = [1, 2, 3, 10]
+    plot_i = 2
+    for k in range(11):
+        learner.value_iteration(max_iters=1)
+        if k in plot_ks:
+            ax = fig.add_subplot(6, 2, plot_i + 1)
+            plot_value(ax)
+            add_k_text(ax, f"$k={k}$")
+            plot_policy(fig.add_subplot(6, 2, plot_i + 2))
+            plot_i += 2
+
+    learner.value_iteration(max_iters=100)
+
+    ax = fig.add_subplot(6, 2, plot_i + 1)
     plot_value(ax)
+    add_k_text(ax, "$k=\\infty$")
+
+    plot_policy(fig.add_subplot(6, 2, plot_i + 2))
+
     fig.savefig("figure_4_1.png", dpi=100)
 
 
