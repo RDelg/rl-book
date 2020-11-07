@@ -81,13 +81,11 @@ class Enviroment(metaclass=ABCMeta):
     def act_space() -> Space:
         raise NotImplementedError
 
-    @abstractmethod
-    def idx_to_state(self, *args, **kwargs) -> Tuple:
-        raise NotImplementedError
+    def idx_to_state(self, idx: Tuple[int, ...]) -> Tuple[int, ...]:
+        return tuple(x + self._obs_space.min for x in idx)
 
-    @abstractmethod
-    def state_to_idx(self, *args, **kwargs) -> Tuple:
-        raise NotImplementedError
+    def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
+        return tuple(x - self._obs_space.min for x in state)
 
 
 class RentalCarEnv(Enviroment):
@@ -124,12 +122,6 @@ class RentalCarEnv(Enviroment):
         self._request_a_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_a)
         self._return_b_pmf = poisson.pmf(range(self._poisson_range), self._lam_in_b)
         self._request_b_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_b)
-
-    def idx_to_state(self, idx: Tuple[int, int]) -> Tuple[int, int]:
-        return idx
-
-    def state_to_idx(self, state: Tuple[int, int]) -> Tuple[int, int]:
-        return state
 
     @staticmethod
     def obs_space() -> Space:
@@ -276,12 +268,6 @@ class GamblerEnv(Enviroment):
     def act_space() -> Space:
         return Space([1], 1, 99, int)
 
-    def idx_to_state(self, idx: Tuple[int]) -> Tuple[int]:
-        return (idx[0] + self._obs_space.min,)
-
-    def state_to_idx(self, state: Tuple[int]) -> Tuple[int]:
-        return (state[0] - self._obs_space.min,)
-
     def dynamics(
         self, estimated_value: np.ndarray, state: Tuple[int], action: int
     ) -> float:
@@ -341,12 +327,6 @@ class GridEnv(Enviroment):
     @staticmethod
     def act_space() -> Space:
         return Space([1], 0, 3, int)
-
-    def idx_to_state(self, idx: Tuple[int, int]) -> Tuple[int, int]:
-        return idx
-
-    def state_to_idx(self, state: Tuple[int, int]) -> Tuple[int, int]:
-        return state
 
     def is_terminal(self, state: Tuple[int, int]) -> bool:
         for terminal_state in self._terminal_states:
