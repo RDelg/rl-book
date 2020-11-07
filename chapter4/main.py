@@ -119,7 +119,7 @@ def figure_4_1():
 
 
 def figure_4_2():
-    env = RentalCarEnv(fixed_return=False)
+    env = RentalCarEnv()
     learner = DynamicPolicyLearner(env)
 
     def plot_policy(

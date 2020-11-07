@@ -17,16 +17,16 @@ class Space:
     dims : list of ints
         Dimentions that the space have.
 
-    min : float
+    min : int
         minimum value that the space could have.
 
-    max : float
+    max : int
         maximum value that the space could have.
 
     dtype: type
         data type of the space."""
 
-    def __init__(self, dims: List[int], min: float, max: float, dtype: Type[int]):
+    def __init__(self, dims: List[int], min: int, max: int, dtype: Type[int]):
         self._dims = dims
         self._min = dtype(min)
         self._max = dtype(max)
@@ -97,10 +97,6 @@ class RentalCarEnv(Enviroment):
     gamma : float, default=0.9
         Gamma value to use when calculating the returns.
 
-    fixed_return : bool, default=True
-        If True, then the returned cars are always equal to the lambda values.
-        If False, then the dynamics are calculated on the returns pmf.
-
     """
 
     # How many values of the Poisson distributtion use to calculate the dynamics
@@ -114,9 +110,8 @@ class RentalCarEnv(Enviroment):
     _move_reward = -2
     _rental_reward = 10
 
-    def __init__(self, gamma: float = 0.9, fixed_return: bool = True):
+    def __init__(self, gamma: float = 0.9):
         super().__init__(gamma)
-        self.fixed_return = fixed_return
         # PMFs
         self._return_a_pmf = poisson.pmf(range(self._poisson_range), self._lam_in_a)
         self._request_a_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_a)
@@ -154,10 +149,7 @@ class RentalCarEnv(Enviroment):
         request_b_pmf: np.ndarray,
         return_a_pmf: np.ndarray,
         return_b_pmf: np.ndarray,
-        lam_in_a: int,
-        lam_in_b: int,
         obs_space_max: int,
-        fixed_return: bool,
         gamma: float,
     ) -> float:
         value = 0.0
@@ -179,45 +171,29 @@ class RentalCarEnv(Enviroment):
 
                 prob = request_a_prob * request_b_prob
 
-                if fixed_return:
-                    return_a = lam_in_a
-                    return_b = lam_in_b
-                    new_state = (
-                        np.array(
-                            [state_a - real_request_a + return_a, obs_space_max]
-                        ).min(),
-                        np.array(
-                            [state_b - real_request_b + return_b, obs_space_max]
-                        ).min(),
-                    )
-                    value += prob * (
-                        reward + gamma * estimated_value[new_state[0], new_state[1]]
-                    )
-                else:
-                    for return_a in range(poisson_range):
-                        return_a_prob = return_a_pmf[return_a]
-                        new_state_a = np.array(
-                            [
-                                state_a - real_request_a + return_a,
-                                obs_space_max,
-                            ]
-                        ).min()
-                        for return_b in range(poisson_range):
-                            return_b_prob = return_b_pmf[return_b]
-                            _prob = prob * return_a_prob * return_b_prob
-                            new_state = (
-                                new_state_a,
-                                np.array(
-                                    [
-                                        state_b - real_request_b + return_b,
-                                        obs_space_max,
-                                    ]
-                                ).min(),
-                            )
-                            value += _prob * (
-                                reward
-                                + gamma * estimated_value[new_state[0], new_state[1]]
-                            )
+                for return_a in range(poisson_range):
+                    return_a_prob = return_a_pmf[return_a]
+                    new_state_a = np.array(
+                        [
+                            state_a - real_request_a + return_a,
+                            obs_space_max,
+                        ]
+                    ).min()
+                    for return_b in range(poisson_range):
+                        return_b_prob = return_b_pmf[return_b]
+                        _prob = prob * return_a_prob * return_b_prob
+                        new_state = (
+                            new_state_a,
+                            np.array(
+                                [
+                                    state_b - real_request_b + return_b,
+                                    obs_space_max,
+                                ]
+                            ).min(),
+                        )
+                        value += _prob * (
+                            reward + gamma * estimated_value[new_state[0], new_state[1]]
+                        )
         return value
 
     def dynamics(
@@ -234,10 +210,7 @@ class RentalCarEnv(Enviroment):
             self._request_b_pmf,
             self._return_a_pmf,
             self._return_b_pmf,
-            self._lam_in_a,
-            self._lam_in_b,
             self._obs_space.max,
-            self.fixed_return,
             self.gamma,
         )
 
