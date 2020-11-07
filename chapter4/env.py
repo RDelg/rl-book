@@ -10,8 +10,8 @@ from scipy.stats import poisson
 
 @dataclass
 class Space:
-    """Bounded space to represent the action and
-    observation spaces of an enviroment.
+    """Class represent the action and observation spaces
+    of an enviroment.
 
     Parameters
     ----------
