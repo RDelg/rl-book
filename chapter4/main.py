@@ -80,6 +80,7 @@ def figure_4_1():
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
 
+    # Plot
     fig = plt.figure(figsize=(12, 36))
 
     def add_k_text(ax, text):
@@ -254,5 +255,5 @@ def figure_4_3():
 
 if __name__ == "__main__":
     figure_4_1()
-    # figure_4_2()
-    # figure_4_3()
+    figure_4_2()
+    figure_4_3()
