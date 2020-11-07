@@ -1,12 +1,14 @@
 from typing import Tuple, Type, List
 from functools import lru_cache
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 
 import numpy as np
 from numba import jit
 from scipy.stats import poisson
 
 
+@dataclass
 class Space:
     """Bounded space to represent the action and
     observation spaces of an enviroment.
@@ -22,26 +24,11 @@ class Space:
 
     max : int
         maximum value that the space could have.
+    """
 
-    dtype: type
-        data type of the space."""
-
-    def __init__(self, dims: List[int], min: int, max: int, dtype: Type[int]):
-        self._dims = dims
-        self._min = dtype(min)
-        self._max = dtype(max)
-
-    @property
-    def dims(self):
-        return self._dims
-
-    @property
-    def min(self):
-        return self._min
-
-    @property
-    def max(self):
-        return self._max
+    dims: List[int]
+    min: int
+    max: int
 
 
 class Enviroment(metaclass=ABCMeta):
@@ -120,11 +107,11 @@ class RentalCarEnv(Enviroment):
 
     @staticmethod
     def obs_space() -> Space:
-        return Space([2], 0, 20, int)
+        return Space([2], 0, 20)
 
     @staticmethod
     def act_space() -> Space:
-        return Space([1], -5, 5, int)
+        return Space([1], -5, 5)
 
     @staticmethod
     @lru_cache(maxsize=None)
@@ -235,11 +222,11 @@ class GamblerEnv(Enviroment):
 
     @staticmethod
     def obs_space() -> Space:
-        return Space([1], 1, 99, int)
+        return Space([1], 1, 99)
 
     @staticmethod
     def act_space() -> Space:
-        return Space([1], 1, 99, int)
+        return Space([1], 1, 99)
 
     def dynamics(
         self, estimated_value: np.ndarray, state: Tuple[int], action: int
@@ -295,11 +282,11 @@ class GridEnv(Enviroment):
 
     @staticmethod
     def obs_space() -> Space:
-        return Space([2], 0, 3, int)
+        return Space([2], 0, 3)
 
     @staticmethod
     def act_space() -> Space:
-        return Space([1], 0, 3, int)
+        return Space([1], 0, 3)
 
     def is_terminal(self, state: Tuple[int, int]) -> bool:
         for terminal_state in self._terminal_states:
