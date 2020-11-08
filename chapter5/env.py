@@ -48,7 +48,7 @@ class Enviroment(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def legal_actions(self, state: Tuple[int, ...]) -> np.ndarray:
+    def legal_actions(state: Tuple[int, ...]) -> np.ndarray:
         raise NotImplementedError
 
     @staticmethod
@@ -112,10 +112,12 @@ class BlackJack(Enviroment):
         # pylint: disable=invalid-sequence-index
         return self._CARDS[np.random.randint(0, 13)]
 
-    def act_space(self) -> Space:
+    @staticmethod
+    def act_space() -> Space:
         return Space(dims=1, min=0, max=1)
 
-    def obs_space(self) -> Space:
+    @staticmethod
+    def obs_space() -> Space:
         return Space(dims=3, min=[12, 0, 1], max=[21, 1, 11])
 
     @property
@@ -127,7 +129,7 @@ class BlackJack(Enviroment):
         )
 
     @staticmethod
-    def legal_actions(self, state: Tuple[int, int, int]) -> np.ndarray:
+    def legal_actions(state: Tuple[int, int, int]) -> np.ndarray:
         return np.arange(2, dtype=np.int32)
 
     @state.setter
