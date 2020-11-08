@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from functools import lru_cache
 from typing import List, Union, Tuple
 from dataclasses import dataclass
 
@@ -128,6 +129,7 @@ class BlackJack(Enviroment):
             11 if self._dealer_usable_ace else self.dealer_card.value,
         )
 
+    @lru_cache
     @staticmethod
     def legal_actions(state: Tuple[int, int, int]) -> np.ndarray:
         return np.arange(2, dtype=np.int32)
