@@ -164,7 +164,7 @@ class BlackJack(Enviroment):
             )
         return dealer_sum
 
-    def step(self, action: int) -> Tuple[bool, float, Tuple[int, ...]]:
+    def step(self, action: int) -> Tuple[bool, float, Tuple[int, int, int]]:
         if action == 0:  # Sticks
             dealer_sum = self._stick()
             if dealer_sum > 21:  # Dealer bust
