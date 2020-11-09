@@ -61,18 +61,6 @@ class Enviroment(metaclass=ABCMeta):
     def act_space() -> Space:
         raise NotImplementedError
 
-    def idx_to_state(self, idx: Tuple[int, ...]) -> Tuple[int, ...]:
-        if isinstance(self._obs_space.min, list):
-            return tuple(x + y for x, y in zip(idx, self._obs_space.min))
-        else:
-            return tuple(x + self._obs_space.min for x in idx)
-
-    def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
-        if isinstance(self._obs_space.min, list):
-            return tuple(x - y for x, y in zip(state, self._obs_space.min))
-        else:
-            return tuple(x - self._obs_space.min for x in state)
-
 
 class BlackJack(Enviroment):
     @dataclass
