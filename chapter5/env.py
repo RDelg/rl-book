@@ -38,11 +38,6 @@ class Space:
 
 
 class Enviroment(metaclass=ABCMeta):
-    def __init__(self):
-        # Instantiate spaces to reduce allocations
-        self._obs_space = self.obs_space()
-        self._act_space = self.act_space()
-
     @abstractmethod
     def step(self, action: int) -> Tuple[bool, float, Tuple[int, ...]]:
         raise NotImplementedError
