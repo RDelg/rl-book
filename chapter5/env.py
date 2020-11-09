@@ -47,9 +47,8 @@ class Enviroment(metaclass=ABCMeta):
     def step(self, action: int) -> Tuple[bool, float, Tuple[int, ...]]:
         raise NotImplementedError
 
-    @staticmethod
     @abstractmethod
-    def legal_actions(state: Tuple[int, ...]) -> np.ndarray:
+    def legal_actions(self, state: Tuple[int, ...]) -> np.ndarray:
         raise NotImplementedError
 
     @staticmethod
@@ -97,6 +96,8 @@ class BlackJack(Enviroment):
         Card("K", 10),
     ]
 
+    _ACTIONS = np.array([0, 1], dtype=np.int32)
+
     def __init__(self):
         self.reset()
 
@@ -129,10 +130,8 @@ class BlackJack(Enviroment):
             11 if self._dealer_usable_ace else self.dealer_card.value,
         )
 
-    @lru_cache
-    @staticmethod
-    def legal_actions(state: Tuple[int, int, int]) -> np.ndarray:
-        return np.arange(2, dtype=np.int32)
+    def legal_actions(self, state: Tuple[int, int, int]) -> np.ndarray:
+        return self._ACTIONS
 
     @state.setter
     def state(self, state: Tuple[int, int, int]):
