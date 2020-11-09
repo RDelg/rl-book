@@ -33,8 +33,8 @@ class Space:
         if isinstance(max, list) and len(max) != dims:
             raise ValueError(f"max length ({len(max)}) doesn't match dims ({dims})")
         self.dims = dims
-        self.min = min
-        self.max = max
+        self.min = min if isinstance(min, list) else [min for _ in range(dims)]
+        self.max = max if isinstance(max, list) else [max for _ in range(dims)]
 
 
 class Enviroment(metaclass=ABCMeta):
