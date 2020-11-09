@@ -130,7 +130,7 @@ class BlackJack(Enviroment):
 
     def _hit(self, current_sum: int, usable_ace: bool):
         card = self._get_card()
-        if card == "_A" and current_sum < 11:
+        if card.letter == "A" and current_sum < 11:
             current_sum += 11
             usable_ace = True
         else:
