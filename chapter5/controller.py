@@ -79,15 +79,16 @@ class MonteCarloController:
         epsilon=0.3,
         init_state=None,
         improve_policy=True,
-        use_tqdm=False,
+        disable_tqdm=False,
     ):
         n = np.zeros_like(self.state_action_value, dtype=np.int32)
-        for _ in trange(iters, disable=use_tqdm):
+        for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
             g = 0
-            for i in range(len(trajectory) - 2, 0, -1):
+            previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
+            for i in range(len(trajectory) - 2, -1, -1):
                 g += trajectory[i + 1].reward
-                previous_states = set(x.state + (x.action,) for x in trajectory[0:i])
+                previous_states.pop()
                 if trajectory[i].state + (trajectory[i].action,) not in previous_states:
                     index = self.state_action_to_idx(
                         trajectory[i].state, trajectory[i].action
@@ -112,18 +113,18 @@ class MonteCarloController:
         init_state=None,
         improve_policy=True,
         weighted=True,
-        use_tqdm=False,
+        disable_tqdm=False,
     ):
         c = np.zeros_like(self.state_action_value, dtype=np.int32)
         if policy is None:
             policy = self.generate_soft_policy(
                 target_policy, epsilon=epsilon, n_actions=self._n_actions
             )
-        for _ in trange(iters, disable=use_tqdm):
+        for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
             g = 0
             w = 1
-            for i in range(len(trajectory) - 2, 0, -1):
+            for i in range(len(trajectory) - 2, -1, -1):
                 g += trajectory[i + 1].reward
                 index = self.state_action_to_idx(
                     trajectory[i].state, trajectory[i].action
