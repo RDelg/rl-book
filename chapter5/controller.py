@@ -12,8 +12,8 @@ class MonteCarloController:
 
     def __init__(self, env: Enviroment):
         self.env = env
-        self._obs_space = env.observation_spec()
-        self._act_space = env.action_spec()
+        self._obs_space = env.obs_space()
+        self._act_space = env.act_space()
         if self._act_space.dims > 1:
             raise ValueError(
                 "MonteCarloController doesn't support more than one dimention in the action space"
@@ -23,7 +23,7 @@ class MonteCarloController:
 
     def reset(self):
         get_shape = lambda x: [_max - _min + 1 for _max, _min in zip(x.max, x.min)]
-        shape = get_shape(self._obs_space) + get_shape(self._act_space)
+        shape = get_shape(self._obs_space) + [self._n_actions]
         self.state_action_value = np.zeros(shape=shape, dtype=np.float32)
 
     def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
@@ -32,7 +32,7 @@ class MonteCarloController:
     def state_action_to_idx(
         self, state: Tuple[int, ...], action: int
     ) -> Tuple[int, ...]:
-        return tuple(x + y for x, y in zip(state, self._obs_space.min)) + (action,)
+        return tuple(x - y for x, y in zip(state, self._obs_space.min)) + (action,)
 
     def generate_episode(
         self, policy: np.ndarray, init_state: Tuple[int, ...] = None
@@ -85,17 +85,12 @@ class MonteCarloController:
         for _ in trange(iters, disable=use_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
             g = 0
-            for i in range(len(trajectory) - 1, 0, -1):
-                g += trajectory[i].reward
-                previous_states = set(
-                    x.state + (x.action,) for x in trajectory[0 : i - 1]
-                )
-                if (
-                    trajectory[i - 1].state + (trajectory[i - 1].action,)
-                    not in previous_states
-                ):
+            for i in range(len(trajectory) - 2, 0, -1):
+                g += trajectory[i + 1].reward
+                previous_states = set(x.state + (x.action,) for x in trajectory[0:i])
+                if trajectory[i].state + (trajectory[i].action,) not in previous_states:
                     index = self.state_action_to_idx(
-                        trajectory[i - 1].state, trajectory[i - 1].action
+                        trajectory[i].state, trajectory[i].action
                     )
                     n[index] += 1
                     self.state_action_value[index] += (
@@ -128,10 +123,10 @@ class MonteCarloController:
             trajectory = self.generate_episode(policy, init_state=init_state)
             g = 0
             w = 1
-            for i in range(len(trajectory) - 1, 0, -1):
-                g += trajectory[i].reward
+            for i in range(len(trajectory) - 2, 0, -1):
+                g += trajectory[i + 1].reward
                 index = self.state_action_to_idx(
-                    trajectory[i - 1].state, trajectory[i - 1].action
+                    trajectory[i].state, trajectory[i].action
                 )
                 c[index] += w
                 self.state_action_value[index] += (
@@ -141,7 +136,7 @@ class MonteCarloController:
                     target_policy[index[:-1]] = self.state_action_value[
                         index[:-1]
                     ].argmax(-1)
-                if target_policy[index[:-1]] != trajectory[i - 1].action:
+                if target_policy[index[:-1]] != trajectory[i].action:
                     break
                 w /= policy[index]
             if improve_policy:
