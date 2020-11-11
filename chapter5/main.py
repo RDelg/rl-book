@@ -67,7 +67,7 @@ def figure_5_2(figsize=(12, 12)):
     mc = MonteCarloController(env)
 
     eps = 0.3
-    iterations = 2_000_000
+    iterations = 5_000_000
 
     policy = mc.generate_soft_policy(mc.greedy_policy, eps, 2)
     mc.on_policy_improvement(policy, iters=iterations)
