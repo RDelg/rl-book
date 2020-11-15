@@ -1,7 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
 import seaborn as sns
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+from matplotlib.colors import ListedColormap
 
 from env import BlackJack
 from predictor import MonteCarloPredictor
@@ -47,7 +48,7 @@ def figure_5_1(figsize=(12, 12)):
     policy = lambda state: state[0] < 20
     for i, it in enumerate([10_000, 500_000]):
         mc = MonteCarloPredictor(env)
-        mc.predict(policy, n_iters=it)
+        mc.predict_on_policy(policy, n_iters=it)
         plot_state_value(
             mc.state_value[:, 1, :],
             fig.add_subplot(2, 2, 1 + i, projection="3d"),
