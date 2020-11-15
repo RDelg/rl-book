@@ -31,9 +31,12 @@ class MonteCarloPredictor:
     def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
         return tuple(x - y for x, y in zip(state, self._obs_space.min))
 
-    def generate_episode(self, policy: Callable):
+    def generate_episode(self, policy: Callable, init_state=None):
+        if init_state is None:
+            self.env.reset()
+        else:
+            self.env.state = init_state
         trajectory = Trajectory()
-        self.env.reset()
         current_state = self.env.state
         finished = False
         reward = 0
@@ -45,9 +48,9 @@ class MonteCarloPredictor:
         trajectory.add_step(finished, current_state, action, reward)
         return trajectory
 
-    def predict_on_policy(self, policy: Callable, n_iters: int = 1):
+    def predict_on_policy(self, policy: Callable, n_iters: int = 1, init_state=None):
         for _ in trange(n_iters):
-            trajectory = self.generate_episode(policy)
+            trajectory = self.generate_episode(policy, init_state=init_state)
             g = 0
             previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
             for i in range(len(trajectory) - 2, -1, -1):
@@ -59,3 +62,4 @@ class MonteCarloPredictor:
                     self.state_value[index] += (
                         g - self.state_value[index]
                     ) / self.n_state[index]
+        return trajectory
