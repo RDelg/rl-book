@@ -104,6 +104,35 @@ class MonteCarloController:
                             n_actions=self._n_actions,
                         )
 
+    def off_policy_predict(
+        self,
+        target_policy,
+        iters=1,
+        epsilon=0.01,
+        init_state=None,
+        disable_tqdm=False,
+    ):
+        c = np.zeros_like(self.state_action_value, dtype=np.int32)
+        policy = self.generate_soft_policy(
+            target_policy, epsilon=epsilon, n_actions=self._n_actions
+        )
+        for _ in trange(iters, disable=disable_tqdm):
+            trajectory = self.generate_episode(policy, init_state=init_state)
+            g = 0
+            rho = 1
+            for i in range(len(trajectory) - 2, -1, -1):
+                g += trajectory[i + 1].reward
+                index = self.state_action_to_idx(
+                    trajectory[i].state, trajectory[i].action
+                )
+                c[index] += rho
+                self.state_action_value[index] += (
+                    g - self.state_action_value[index]
+                ) * (rho / c[index])
+                rho *= target_policy[index[:-1]] / policy[index]
+                if rho == 0:
+                    break
+
     def off_policy_improvement(
         self,
         target_policy,
@@ -122,28 +151,28 @@ class MonteCarloController:
             )
         for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
-            g = 0
-            w = 1
+
             for i in range(len(trajectory) - 2, -1, -1):
                 g += trajectory[i + 1].reward
                 index = self.state_action_to_idx(
                     trajectory[i].state, trajectory[i].action
                 )
-                c[index] += w
+                c[index] += rho
                 self.state_action_value[index] += (
                     g - self.state_action_value[index]
-                ) * (w / c[index])
+                ) * (rho / c[index])
                 if improve_policy:
                     target_policy[index[:-1]] = self.state_action_value[
                         index[:-1]
                     ].argmax(-1)
                 if target_policy[index[:-1]] != trajectory[i].action:
                     break
-                w /= policy[index]
-            if improve_policy:
-                policy = self.generate_soft_policy(
-                    target_policy, epsilon=epsilon, n_actions=self._n_actions
-                )
+            rho /= policy[index]
+
+        if improve_policy:
+            policy = self.generate_soft_policy(
+                target_policy, epsilon=epsilon, n_actions=self._n_actions
+            )
 
     @property
     def greedy_policy(self):
