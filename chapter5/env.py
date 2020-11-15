@@ -140,11 +140,10 @@ class BlackJack(Enviroment):
             return current_sum, usable_ace
 
     def _stick(self):
-        dealer_sum = 11 if self._dealer_usable_ace else self.dealer_card.value
+        dealer_usable_ace = self._dealer_usable_ace
+        dealer_sum = 11 if dealer_usable_ace else self.dealer_card.value
         while dealer_sum < 17:
-            dealer_sum, self._dealer_usable_ace = self._hit(
-                dealer_sum, self._dealer_usable_ace
-            )
+            dealer_sum, dealer_usable_ace = self._hit(dealer_sum, dealer_usable_ace)
         return dealer_sum
 
     def step(self, action: int) -> Tuple[bool, float, Tuple[int, int, int]]:
