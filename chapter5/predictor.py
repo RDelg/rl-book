@@ -45,15 +45,16 @@ class MonteCarloPredictor:
         trajectory.add_step(finished, current_state, action, reward)
         return trajectory
 
-    def predict(self, policy: Callable, n_iters: int = 1):
+    def predict_on_policy(self, policy: Callable, n_iters: int = 1):
         for _ in trange(n_iters):
             trajectory = self.generate_episode(policy)
             g = 0
-            for i in range(len(trajectory) - 1, 0, -1):
-                g += trajectory[i].reward
-                previous_states = set(x.state for x in trajectory[0 : i - 1])
-                if trajectory[i - 1].state not in previous_states:
-                    index = self.state_to_idx(trajectory[i - 1].state)
+            previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
+            for i in range(len(trajectory) - 2, -1, -1):
+                g += trajectory[i + 1].reward
+                previous_states.pop()
+                if trajectory[i].state not in previous_states:
+                    index = self.state_to_idx(trajectory[i].state)
                     self.n_state[index] += 1
                     self.state_value[index] += (
                         g - self.state_value[index]
