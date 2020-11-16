@@ -68,7 +68,6 @@ class BlackJack(Enviroment):
 
     _CARDS = [
         Card("A", 1),
-        Card("1", 1),
         Card("2", 2),
         Card("3", 3),
         Card("4", 4),
@@ -77,6 +76,7 @@ class BlackJack(Enviroment):
         Card("7", 7),
         Card("8", 8),
         Card("9", 9),
+        Card("10", 10),
         Card("J", 10),
         Card("Q", 10),
         Card("K", 10),
@@ -98,7 +98,7 @@ class BlackJack(Enviroment):
 
     def _get_card(self):
         # pylint: disable=invalid-sequence-index
-        return self._CARDS[np.random.randint(0, 13)]
+        return self._CARDS[np.random.randint(0, 12)]
 
     @staticmethod
     def act_space() -> Space:
@@ -106,14 +106,14 @@ class BlackJack(Enviroment):
 
     @staticmethod
     def obs_space() -> Space:
-        return Space(dims=3, min=[12, 0, 1], max=[21, 1, 11])
+        return Space(dims=3, min=[12, 0, 1], max=[21, 1, 10])
 
     @property
     def state(self):
         return (
             self.player_sum,
-            1 if self.usable_ace else 0,
-            11 if self._dealer_usable_ace else self.dealer_card.value,
+            int(self.usable_ace),
+            self.dealer_card.value,
         )
 
     def legal_actions(self, state: Tuple[int, int, int]) -> np.ndarray:
@@ -122,13 +122,13 @@ class BlackJack(Enviroment):
     @state.setter
     def state(self, state: Tuple[int, int, int]):
         self.player_sum = state[0]
-        self.usable_ace = state[1]
-        self.dealer_card = self._CARDS[0] if state[2] == 11 else self._CARDS[state[2]]
+        self.usable_ace = bool(state[1])
+        self.dealer_card = [c for c in self._CARDS if c.value == state[2]][0]
         self._dealer_usable_ace = self.dealer_card.letter == "A"
 
     def _hit(self, current_sum: int, usable_ace: bool):
         card = self._get_card()
-        if card.letter == "A" and current_sum < 11:
+        if card.letter == "A" and not usable_ace and current_sum < 11:
             current_sum += 11
             usable_ace = True
         else:
