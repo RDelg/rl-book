@@ -59,6 +59,8 @@ class Enviroment(metaclass=ABCMeta):
 
 
 class BlackJack(Enviroment):
+    _DEALER_THRESHOLD = 17
+
     @dataclass
     class Card:
         letter: str
@@ -110,7 +112,7 @@ class BlackJack(Enviroment):
     def state(self):
         return (
             self.player_sum,
-            self.usable_ace,
+            1 if self.usable_ace else 0,
             11 if self._dealer_usable_ace else self.dealer_card.value,
         )
 
@@ -142,7 +144,7 @@ class BlackJack(Enviroment):
     def _stick(self):
         dealer_usable_ace = self._dealer_usable_ace
         dealer_sum = 11 if dealer_usable_ace else self.dealer_card.value
-        while dealer_sum < 17:
+        while dealer_sum < self._DEALER_THRESHOLD:
             dealer_sum, dealer_usable_ace = self._hit(dealer_sum, dealer_usable_ace)
         return dealer_sum
 
