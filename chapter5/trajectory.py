@@ -9,6 +9,9 @@ class Step:
     action: int
     reward: float
 
+    def __iter__(self):
+        return iter((self.is_final, self.state, self.action, self.reward))
+
 
 class Trajectory:
     def __init__(self):
