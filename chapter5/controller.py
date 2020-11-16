@@ -25,6 +25,7 @@ class MonteCarloController:
         get_shape = lambda x: [_max - _min + 1 for _max, _min in zip(x.max, x.min)]
         shape = get_shape(self._obs_space) + [self._n_actions]
         self.state_action_value = np.zeros(shape=shape, dtype=np.float32)
+        self.c = np.zeros_like(self.state_action_value, dtype=np.float32)
 
     def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
         return tuple(x - y for x, y in zip(state, self._obs_space.min))
@@ -82,13 +83,16 @@ class MonteCarloController:
         disable_tqdm=False,
     ):
         n = np.zeros_like(self.state_action_value, dtype=np.int32)
+        trajectories = []
         for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
+            trajectories.append(trajectory)
             g = 0
             previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
             for i in range(len(trajectory) - 2, -1, -1):
                 g += trajectory[i + 1].reward
                 previous_states.pop()
+                # First visit
                 if trajectory[i].state + (trajectory[i].action,) not in previous_states:
                     index = self.state_action_to_idx(
                         trajectory[i].state, trajectory[i].action
@@ -103,21 +107,23 @@ class MonteCarloController:
                             epsilon=epsilon,
                             n_actions=self._n_actions,
                         )
+        return trajectories
 
     def off_policy_predict(
         self,
         target_policy,
         iters=1,
-        epsilon=0.01,
+        epsilon=0.3,
         init_state=None,
         disable_tqdm=False,
     ):
-        c = np.zeros_like(self.state_action_value, dtype=np.int32)
-        policy = self.generate_soft_policy(
+        b_policy = self.generate_soft_policy(
             target_policy, epsilon=epsilon, n_actions=self._n_actions
         )
+        trajectories = []
         for _ in trange(iters, disable=disable_tqdm):
-            trajectory = self.generate_episode(policy, init_state=init_state)
+            trajectory = self.generate_episode(b_policy, init_state=init_state)
+            trajectories.append(trajectory)
             g = 0
             rho = 1
             for i in range(len(trajectory) - 2, -1, -1):
@@ -125,13 +131,14 @@ class MonteCarloController:
                 index = self.state_action_to_idx(
                     trajectory[i].state, trajectory[i].action
                 )
-                c[index] += rho
+                self.c[index] += rho
                 self.state_action_value[index] += (
                     g - self.state_action_value[index]
-                ) * (rho / c[index])
-                rho *= target_policy[index[:-1]] / policy[index]
+                ) * (rho / self.c[index])
+                rho *= target_policy[index[:-1]] / b_policy[index]
                 if rho == 0:
                     break
+        return trajectories
 
     def off_policy_improvement(
         self,
@@ -144,7 +151,7 @@ class MonteCarloController:
         weighted=True,
         disable_tqdm=False,
     ):
-        c = np.zeros_like(self.state_action_value, dtype=np.int32)
+        c = np.zeros_like(self.state_action_value, dtype=np.float32)
         if policy is None:
             policy = self.generate_soft_policy(
                 target_policy, epsilon=epsilon, n_actions=self._n_actions
