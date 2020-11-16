@@ -152,13 +152,13 @@ class BlackJack(Enviroment):
         if action == 0:  # Sticks
             dealer_sum = self._stick()
             if dealer_sum > 21:  # Dealer bust
-                return True, 1, self.state
+                return True, 1, self.state[:2] + (dealer_sum,)
             elif dealer_sum == self.player_sum:
-                return True, 0, self.state
+                return True, -1, self.state[:2] + (dealer_sum,)
             elif dealer_sum < self.player_sum:
-                return True, 1, self.state
+                return True, 1, self.state[:2] + (dealer_sum,)
             else:
-                return True, -1, self.state
+                return True, -1, self.state[:2] + (dealer_sum,)
         elif action == 1:  # Hits
             self.player_sum, self.usable_ace = self._hit(
                 self.player_sum, self.usable_ace
