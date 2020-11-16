@@ -135,7 +135,10 @@ class MonteCarloController:
                 self.state_action_value[index] += (
                     g - self.state_action_value[index]
                 ) * (rho / self.c[index])
-                rho *= target_policy[index[:-1]] / b_policy[index]
+                rho *= (
+                    float(target_policy[index[:-1]] == trajectory[i].action)
+                    / b_policy[index]
+                )
                 if rho == 0:
                     break
         return trajectories
