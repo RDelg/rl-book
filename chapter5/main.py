@@ -105,7 +105,15 @@ def figure_5_3(figsize=(12, 12)):
     target_policy[-2:, :, :] = 0
 
     env = BlackJack()
-    iters_arr = [10 ** x for x in range(6)]
+    iters_base = [10 ** x for x in range(5)]
+    iters_arr = np.unique(
+        np.concatenate(
+            [
+                np.arange(iters_base[i - 1], iters_base[i] + 1, step=iters_base[i - 1])
+                for i in range(1, len(iters_base))
+            ]
+        )
+    )
     runs = 100
 
     run_Vs = []
@@ -129,6 +137,7 @@ def figure_5_3(figsize=(12, 12)):
     ax = fig.add_subplot(111)
     ax.plot(iters_arr, err)
     ax.set_xscale("log")
+    ax.set_ylim([-0.1, 5])
     fig.savefig("figure_5_3.png", dpi=100)
 
 
