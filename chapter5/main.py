@@ -50,12 +50,12 @@ def figure_5_1(figsize=(12, 12)):
         mc = MonteCarloPredictor(env)
         mc.predict_on_policy(policy, n_iters=it)
         plot_state_value(
-            mc.state_value[:, 1, :],
+            mc.V[:, 1, :],
             fig.add_subplot(2, 2, 1 + i, projection="3d"),
             f"Usable ace {it} iterations",
         )
         plot_state_value(
-            mc.state_value[:, 0, :],
+            mc.V[:, 0, :],
             fig.add_subplot(2, 2, 3 + i, projection="3d"),
             f"No usable ace {it} iterations",
         )
@@ -75,12 +75,10 @@ def figure_5_2(figsize=(12, 12)):
 
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(222, projection="3d")
-    plot_state_value(
-        mc.state_value[:, 1, :], ax=ax, title=f"Value usable ace {iterations} iters"
-    )
+    plot_state_value(mc.V[:, 1, :], ax=ax, title=f"Value usable ace {iterations} iters")
     ax = fig.add_subplot(224, projection="3d")
     plot_state_value(
-        mc.state_value[:, 0, :], ax=ax, title=f"value no usable ace {iterations} iters"
+        mc.V[:, 0, :], ax=ax, title=f"value no usable ace {iterations} iters"
     )
 
     ax = fig.add_subplot(221)
@@ -105,7 +103,7 @@ def figure_5_3(figsize=(12, 12)):
     mc = MonteCarloPredictor(env)
     mc.predict_on_policy(policy, n_iters=1_000_000, init_state=init_state)
 
-    print(mc.state_value[1, 1, 1])
+    print(mc.V[1, 1, 1])
 
     fig = plt.figure(figsize=figsize)
 
@@ -173,6 +171,6 @@ def figure_5_3(figsize=(12, 12)):
 
 
 if __name__ == "__main__":
-    # figure_5_1()
-    # figure_5_2()
-    figure_5_3()
+    figure_5_1()
+    figure_5_2()
+    # figure_5_3()

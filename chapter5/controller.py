@@ -24,8 +24,9 @@ class MonteCarloController:
     def reset(self):
         get_shape = lambda x: [_max - _min + 1 for _max, _min in zip(x.max, x.min)]
         shape = get_shape(self._obs_space) + [self._n_actions]
-        self.state_action_value = np.zeros(shape=shape, dtype=np.float32)
-        self.c = np.zeros_like(self.state_action_value, dtype=np.float32)
+        self.Q = np.zeros(shape=shape, dtype=np.float32)
+        self.C = np.zeros_like(self.Q, dtype=np.float32)
+        self.N = np.zeros_like(self.Q, dtype=np.int32)
 
     def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
         return tuple(x - y for x, y in zip(state, self._obs_space.min))
@@ -82,28 +83,24 @@ class MonteCarloController:
         improve_policy=True,
         disable_tqdm=False,
     ):
-        n = np.zeros_like(self.state_action_value, dtype=np.int32)
         trajectories = []
         for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
             trajectories.append(trajectory)
-            g = 0
+            G = 0
             previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
             for i in range(len(trajectory) - 2, -1, -1):
-                g += trajectory[i + 1].reward
+                G += trajectory[i + 1].reward
                 previous_states.pop()
+                _, s, a, _ = trajectory[i]
                 # First visit
-                if trajectory[i].state + (trajectory[i].action,) not in previous_states:
-                    index = self.state_action_to_idx(
-                        trajectory[i].state, trajectory[i].action
-                    )
-                    n[index] += 1
-                    self.state_action_value[index] += (
-                        g - self.state_action_value[index]
-                    ) / n[index]
+                if s + (a,) not in previous_states:
+                    s_a_idx = self.state_action_to_idx(s, a)
+                    self.N[s_a_idx] += 1
+                    self.Q[s_a_idx] += (G - self.Q[s_a_idx]) / self.N[s_a_idx]
                     if improve_policy:
-                        policy[index[:-1]] = self.generate_soft_policy(
-                            self.state_action_value[index[:-1]].argmax(-1),
+                        policy[s_a_idx[:-1]] = self.generate_soft_policy(
+                            self.Q[s_a_idx[:-1]].argmax(-1),
                             epsilon=epsilon,
                             n_actions=self._n_actions,
                         )
@@ -124,22 +121,16 @@ class MonteCarloController:
         for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(b_policy, init_state=init_state)
             trajectories.append(trajectory)
-            g = 0
-            rho = 1
+            G = 0.0
+            W = 1.0
             for i in range(len(trajectory) - 2, -1, -1):
-                g += trajectory[i + 1].reward
-                index = self.state_action_to_idx(
-                    trajectory[i].state, trajectory[i].action
-                )
-                self.c[index] += rho
-                self.state_action_value[index] += (
-                    g - self.state_action_value[index]
-                ) * (rho / self.c[index])
-                rho *= (
-                    float(target_policy[index[:-1]] == trajectory[i].action)
-                    / b_policy[index]
-                )
-                if rho == 0:
+                G += trajectory[i + 1].reward
+                _, s, a, _ = trajectory[i]
+                s_a_idx = self.state_action_to_idx(s, a)
+                self.C[s_a_idx] += W
+                self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / self.C[s_a_idx])
+                W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
+                if W == 0.0:
                     break
         return trajectories
 
@@ -154,31 +145,25 @@ class MonteCarloController:
         weighted=True,
         disable_tqdm=False,
     ):
-        c = np.zeros_like(self.state_action_value, dtype=np.float32)
         if policy is None:
             policy = self.generate_soft_policy(
                 target_policy, epsilon=epsilon, n_actions=self._n_actions
             )
         for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
-            g = 0
-            rho = 1
+            G = 0
+            W = 1
             for i in range(len(trajectory) - 2, -1, -1):
-                g += trajectory[i + 1].reward
-                index = self.state_action_to_idx(
-                    trajectory[i].state, trajectory[i].action
-                )
-                c[index] += rho
-                self.state_action_value[index] += (
-                    g - self.state_action_value[index]
-                ) * (rho / c[index])
+                G += trajectory[i + 1].reward
+                _, s, a, _ = trajectory[i]
+                s_a_idx = self.state_action_to_idx(s, a)
+                self.C[s_a_idx] += W
+                self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / self.C[s_a_idx])
                 if improve_policy:
-                    target_policy[index[:-1]] = self.state_action_value[
-                        index[:-1]
-                    ].argmax(-1)
-                if target_policy[index[:-1]] != trajectory[i].action:
+                    target_policy[s_a_idx[:-1]] = self.Q[s_a_idx[:-1]].argmax(-1)
+                if target_policy[s_a_idx[:-1]] != trajectory[i].action:
                     break
-                rho /= policy[index]
+                W /= policy[s_a_idx]
             if improve_policy:
                 policy = self.generate_soft_policy(
                     target_policy, epsilon=epsilon, n_actions=self._n_actions
@@ -186,11 +171,12 @@ class MonteCarloController:
 
     @property
     def greedy_policy(self):
-        return self.state_action_value.argmax(-1)
+        return self.Q.argmax(-1)
 
     @property
-    def state_value(self):
-        return self.state_action_value.max(-1)
+    def V(self):
+        # State Value
+        return self.Q.max(-1)
 
     def get_policy_value(self, greedy_policy: np.ndarray) -> np.ndarray:
         value = np.zeros_like(greedy_policy, np.float32)
@@ -200,5 +186,5 @@ class MonteCarloController:
             op_flags=[["writeonly"], ["readonly"]],
         ) as it:
             for val, pol in it:
-                val[...] = self.state_action_value[it.multi_index + (int(pol),)]
+                val[...] = self.Q[it.multi_index + (int(pol),)]
         return value
