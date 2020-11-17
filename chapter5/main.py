@@ -131,7 +131,7 @@ def figure_5_3(figsize=(12, 12)):
             iter_Vs.append(mc_off.Q[idx_state].max(-1))
         run_Vs.append(iter_Vs)
 
-    err = np.power(true_value - np.array(run_Vs).mean(0), 2)
+    err = np.power(true_value - np.array(run_Vs), 2).mean(0)
 
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111)
