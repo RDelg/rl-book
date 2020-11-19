@@ -1,5 +1,5 @@
 from typing import Callable
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 from tqdm import trange
@@ -31,7 +31,9 @@ class MonteCarloPredictor:
     def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
         return tuple(x - y for x, y in zip(state, self._obs_space.min))
 
-    def generate_episode(self, policy: Callable, init_state=None):
+    def generate_episode(
+        self, policy: Callable, init_state: Optional[Tuple[int, ...]] = None
+    ) -> Trajectory:
         if init_state is None:
             self.env.reset()
         else:
@@ -48,7 +50,12 @@ class MonteCarloPredictor:
         trajectory.add_step(finished, current_state, None, reward)
         return trajectory
 
-    def predict_on_policy(self, policy: Callable, n_iters: int = 1, init_state=None):
+    def predict_on_policy(
+        self,
+        policy: Callable,
+        n_iters: int = 1,
+        init_state: Optional[Tuple[int, ...]] = None,
+    ):
         for _ in trange(n_iters):
             trajectory = self.generate_episode(policy, init_state=init_state)
             G = 0
