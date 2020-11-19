@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 from tqdm import trange
@@ -37,7 +37,7 @@ class MonteCarloController:
         return tuple(x - y for x, y in zip(state, self._obs_space.min)) + (action,)
 
     def generate_episode(
-        self, policy: np.ndarray, init_state: Tuple[int, ...] = None
+        self, policy: np.ndarray, init_state: Optional[Tuple[int, ...]] = None
     ) -> Trajectory:
         if init_state is not None:
             self.env.state = init_state
@@ -76,11 +76,11 @@ class MonteCarloController:
 
     def on_policy_improvement(
         self,
-        policy,
-        iters=1,
-        epsilon=0.3,
-        init_state=None,
-        disable_tqdm=False,
+        policy: np.ndarray,
+        iters: int = 1,
+        epsilon: float = 0.3,
+        init_state: Optional[Tuple[int, ...]] = None,
+        disable_tqdm: bool = False,
     ):
         trajectories = []
         for _ in trange(iters, disable=disable_tqdm):
@@ -106,11 +106,11 @@ class MonteCarloController:
 
     def off_policy_weighted_predict(
         self,
-        target_policy,
-        iters=1,
-        epsilon=0.3,
-        init_state=None,
-        disable_tqdm=False,
+        target_policy: np.ndarray,
+        iters: int = 1,
+        epsilon: float = 0.3,
+        init_state: Optional[Tuple[int, ...]] = None,
+        disable_tqdm: bool = False,
     ):
         b_policy = self.generate_soft_policy(
             target_policy, epsilon=epsilon, n_actions=self._n_actions
@@ -134,11 +134,11 @@ class MonteCarloController:
 
     def off_policy_ordinary_predict(
         self,
-        target_policy,
-        iters=1,
-        epsilon=0.3,
-        init_state=None,
-        disable_tqdm=False,
+        target_policy: np.ndarray,
+        iters: int = 1,
+        epsilon: float = 0.3,
+        init_state: Optional[Tuple[int, ...]] = None,
+        disable_tqdm: bool = False,
     ):
         b_policy = self.generate_soft_policy(
             target_policy, epsilon=epsilon, n_actions=self._n_actions
@@ -162,11 +162,11 @@ class MonteCarloController:
 
     def off_policy_improvement(
         self,
-        target_policy,
-        iters=1,
-        epsilon=0.3,
-        init_state=None,
-        disable_tqdm=False,
+        target_policy: np.ndarray,
+        iters: int = 1,
+        epsilon: float = 0.3,
+        init_state: Optional[Tuple[int, ...]] = None,
+        disable_tqdm: bool = False,
     ):
         for _ in trange(iters, disable=disable_tqdm):
             b_policy = self.generate_soft_policy(
