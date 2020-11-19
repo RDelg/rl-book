@@ -82,10 +82,8 @@ class MonteCarloController:
         init_state: Optional[Tuple[int, ...]] = None,
         disable_tqdm: bool = False,
     ):
-        trajectories = []
         for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
-            trajectories.append(trajectory)
             G = 0
             previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
             for i in range(len(trajectory) - 2, -1, -1):
@@ -102,7 +100,6 @@ class MonteCarloController:
                         epsilon=epsilon,
                         n_actions=self._n_actions,
                     )
-        return trajectories
 
     def off_policy_weighted_predict(
         self,
@@ -115,10 +112,8 @@ class MonteCarloController:
         b_policy = self.generate_soft_policy(
             target_policy, epsilon=epsilon, n_actions=self._n_actions
         )
-        trajectories = []
         for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(b_policy, init_state=init_state)
-            trajectories.append(trajectory)
             G = 0.0
             W = 1.0
             for i in range(len(trajectory) - 2, -1, -1):
@@ -130,7 +125,6 @@ class MonteCarloController:
                 W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
                 if W == 0.0:
                     break
-        return trajectories
 
     def off_policy_ordinary_predict(
         self,
@@ -143,10 +137,8 @@ class MonteCarloController:
         b_policy = self.generate_soft_policy(
             target_policy, epsilon=epsilon, n_actions=self._n_actions
         )
-        trajectories = []
         for _ in trange(iters, disable=disable_tqdm):
             trajectory = self.generate_episode(b_policy, init_state=init_state)
-            trajectories.append(trajectory)
             G = 0.0
             W = 1.0
             for i in range(len(trajectory) - 2, -1, -1):
@@ -158,7 +150,6 @@ class MonteCarloController:
                 W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
                 if W == 0.0:
                     break
-        return trajectories
 
     def off_policy_improvement(
         self,
@@ -192,7 +183,6 @@ class MonteCarloController:
 
     @property
     def V(self):
-        # State Value
         return self.Q.max(-1)
 
     def get_policy_value(self, greedy_policy: np.ndarray) -> np.ndarray:
