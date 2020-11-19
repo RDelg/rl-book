@@ -80,7 +80,6 @@ class MonteCarloController:
         iters=1,
         epsilon=0.3,
         init_state=None,
-        improve_policy=True,
         disable_tqdm=False,
     ):
         trajectories = []
@@ -98,12 +97,11 @@ class MonteCarloController:
                     s_a_idx = self.state_action_to_idx(s, a)
                     self.N[s_a_idx] += 1
                     self.Q[s_a_idx] += (G - self.Q[s_a_idx]) / self.N[s_a_idx]
-                    if improve_policy:
-                        policy[s_a_idx[:-1]] = self.generate_soft_policy(
-                            self.Q[s_a_idx[:-1]].argmax(-1),
-                            epsilon=epsilon,
-                            n_actions=self._n_actions,
-                        )
+                    policy[s_a_idx[:-1]] = self.generate_soft_policy(
+                        self.Q[s_a_idx[:-1]].argmax(-1),
+                        epsilon=epsilon,
+                        n_actions=self._n_actions,
+                    )
         return trajectories
 
     def off_policy_weighted_predict(
@@ -165,20 +163,16 @@ class MonteCarloController:
     def off_policy_improvement(
         self,
         target_policy,
-        policy=None,
         iters=1,
         epsilon=0.3,
         init_state=None,
-        improve_policy=True,
-        weighted=True,
         disable_tqdm=False,
     ):
-        if policy is None:
-            policy = self.generate_soft_policy(
-                target_policy, epsilon=epsilon, n_actions=self._n_actions
-            )
+        b_policy = self.generate_soft_policy(
+            target_policy, epsilon=epsilon, n_actions=self._n_actions
+        )
         for _ in trange(iters, disable=disable_tqdm):
-            trajectory = self.generate_episode(policy, init_state=init_state)
+            trajectory = self.generate_episode(b_policy, init_state=init_state)
             G = 0
             W = 1
             for i in range(len(trajectory) - 2, -1, -1):
@@ -187,15 +181,13 @@ class MonteCarloController:
                 s_a_idx = self.state_action_to_idx(s, a)
                 self.C[s_a_idx] += W
                 self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / self.C[s_a_idx])
-                if improve_policy:
-                    target_policy[s_a_idx[:-1]] = self.Q[s_a_idx[:-1]].argmax(-1)
-                if target_policy[s_a_idx[:-1]] != trajectory[i].action:
+                W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
+                if W == 0.0:
                     break
-                W /= policy[s_a_idx]
-            if improve_policy:
-                policy = self.generate_soft_policy(
-                    target_policy, epsilon=epsilon, n_actions=self._n_actions
-                )
+            target_policy[...] = self.Q.argmax(-1)
+            b_policy = self.generate_soft_policy(
+                target_policy, epsilon=epsilon, n_actions=self._n_actions
+            )
 
     @property
     def greedy_policy(self):
