@@ -168,10 +168,10 @@ class MonteCarloController:
         init_state=None,
         disable_tqdm=False,
     ):
-        b_policy = self.generate_soft_policy(
-            target_policy, epsilon=epsilon, n_actions=self._n_actions
-        )
         for _ in trange(iters, disable=disable_tqdm):
+            b_policy = self.generate_soft_policy(
+                target_policy, epsilon=epsilon, n_actions=self._n_actions
+            )
             trajectory = self.generate_episode(b_policy, init_state=init_state)
             G = 0
             W = 1
@@ -185,9 +185,6 @@ class MonteCarloController:
                 if W == 0.0:
                     break
             target_policy[...] = self.Q.argmax(-1)
-            b_policy = self.generate_soft_policy(
-                target_policy, epsilon=epsilon, n_actions=self._n_actions
-            )
 
     @property
     def greedy_policy(self):
