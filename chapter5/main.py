@@ -1,7 +1,7 @@
 import numpy as np
 import seaborn as sns
+from tqdm import trange, tqdm
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 from matplotlib.colors import ListedColormap
 
 from env import BlackJack
@@ -114,30 +114,48 @@ def figure_5_3(figsize=(12, 12)):
             ]
         )
     )
+    iters_run = [iters_arr[0]] + np.diff(iters_arr).tolist()
     runs = 100
-
-    run_Vs = []
-    for _ in tqdm(range(runs)):
-        iter_Vs = []
-        mc_off = MonteCarloController(env)
-        for iterations in tqdm([iters_arr[0]] + np.diff(iters_arr).tolist()):
-            mc_off.off_policy_predict(
+    run_w_Vs = []
+    run_o_Vs = []
+    for _ in trange(runs):
+        iter_w_Vs = []
+        iter_o_Vs = []
+        mc_w = MonteCarloController(env)
+        mc_o = MonteCarloController(env)
+        for iterations in tqdm(iters_run):
+            mc_w.off_policy_weighted_predict(
                 target_policy,
-                epsilon=0.3,
+                epsilon=1.0,
                 iters=iterations,
                 init_state=init_state,
                 disable_tqdm=True,
             )
-            iter_Vs.append(mc_off.Q[idx_state].max(-1))
-        run_Vs.append(iter_Vs)
+            mc_o.off_policy_ordinary_predict(
+                target_policy,
+                epsilon=1.0,
+                iters=iterations,
+                init_state=init_state,
+                disable_tqdm=True,
+            )
+            iter_w_Vs.append(mc_w.Q[idx_state].max(-1))
+            iter_o_Vs.append(mc_o.Q[idx_state].max(-1))
+        run_w_Vs.append(iter_w_Vs)
+        run_o_Vs.append(iter_o_Vs)
 
-    err = np.power(true_value - np.array(run_Vs), 2).mean(0)
+    err_w = np.power(true_value - np.array(run_w_Vs), 2).mean(0)
+    err_o = np.power(true_value - np.array(run_o_Vs), 2).mean(0)
 
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111)
-    ax.plot(iters_arr, err)
+    ax.plot(iters_arr, err_w, color="red", label="Weighted importance sampling")
+    ax.plot(iters_arr, err_o, color="green", label="Ordinary importance sampling")
     ax.set_xscale("log")
-    ax.set_ylim([-0.1, 5])
+    ax.set_ylim([-0.1, 6])
+    ax.legend(fontsize=20)
+    ax.set_ylabel("Mean square error (average over 100 runs)", size=20)
+    ax.set_xlabel("Episodes (log scale)", size=20)
+    ax.tick_params(labelsize="large")
     fig.savefig("figure_5_3.png", dpi=100)
 
 
