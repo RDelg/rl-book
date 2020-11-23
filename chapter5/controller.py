@@ -18,15 +18,17 @@ class MonteCarloController:
             raise ValueError(
                 "MonteCarloController doesn't support more than one dimention in the action space"
             )
-        self._n_actions = self._act_space.max - self._act_space.min + 1
+        self._n_actions = (self._act_space.max - self._act_space.min + 1)[0]
         self.reset()
 
     def reset(self):
         get_shape = lambda x: [_max - _min + 1 for _max, _min in zip(x.max, x.min)]
         shape = get_shape(self._obs_space) + [self._n_actions]
         self.Q = np.zeros(shape=shape, dtype=np.float32)
+        self.Q_reg = {}
         self.C = np.zeros_like(self.Q, dtype=np.float32)
         self.N = np.zeros_like(self.Q, dtype=np.int32)
+        self.cum_iters = 0
 
     def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
         return tuple(x - y for x, y in zip(state, self._obs_space.min))
@@ -145,11 +147,18 @@ class MonteCarloController:
                 G += trajectory[i + 1].reward
                 _, s, a, _ = trajectory[i]
                 s_a_idx = self.state_action_to_idx(s, a)
-                self.N[s_a_idx] += 1
-                self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / self.N[s_a_idx])
+                # self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / (it + 1))
+                if self.Q_reg.get(s_a_idx, None) is None:
+                    self.Q_reg[s_a_idx] = [G * W]
+                else:
+                    self.Q_reg[s_a_idx].append(G * W)
                 W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
                 if W == 0.0:
                     break
+
+        self.cum_iters += iters
+        for key in self.Q_reg.keys():
+            self.Q[key] = np.sum(self.Q_reg[key]) / self.cum_iters
 
     def off_policy_improvement(
         self,

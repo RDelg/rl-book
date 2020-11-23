@@ -4,7 +4,7 @@ from tqdm import trange, tqdm
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from env import BlackJack
+from env import BlackJack, SingleState
 from predictor import MonteCarloPredictor
 from controller import MonteCarloController
 
@@ -159,7 +159,59 @@ def figure_5_3(figsize=(12, 12)):
     fig.savefig("figure_5_3.png", dpi=100)
 
 
+def figure_5_4(figsize=(12, 12)):
+    env = SingleState()
+
+    target_policy = np.zeros((1,), dtype=np.int32)
+
+    # mc = MonteCarloController(env)
+    # mc.off_policy_ordinary_predict(
+    #     target_policy,
+    #     epsilon=1.0,
+    #     iters=10000,
+    #     disable_tqdm=True,
+    # )
+    # print(mc.Q, mc.V)
+
+    iters_base = [10 ** x for x in range(6)]
+    iters_arr = np.unique(
+        np.concatenate(
+            [
+                np.arange(iters_base[i - 1], iters_base[i] + 1, step=iters_base[i - 1])
+                for i in range(1, len(iters_base))
+            ]
+        )
+    )
+    iters_run = [iters_arr[0]] + np.diff(iters_arr).tolist()
+    runs = 3
+
+    controllers = [MonteCarloController(env) for _ in range(runs)]
+    run_Vs = []
+    for iterations in tqdm(iters_run):
+        iter_Vs = []
+        for mc in tqdm(controllers, desc="Controller", leave=False):
+            mc.off_policy_ordinary_predict(
+                target_policy,
+                epsilon=1.0,
+                iters=iterations,
+                disable_tqdm=True,
+            )
+            iter_Vs.append(mc.V[0])
+        run_Vs.append(iter_Vs)
+
+    run_Vs = np.array(run_Vs)
+    print(run_Vs)
+
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111)
+
+    ax.plot(iters_arr, run_Vs)
+    ax.set_xscale("log")
+    fig.savefig("figure_5_4.png", dpi=100)
+
+
 if __name__ == "__main__":
-    figure_5_1()
-    figure_5_2()
-    figure_5_3()
+    # figure_5_1()
+    # figure_5_2()
+    # figure_5_3()
+    figure_5_4()

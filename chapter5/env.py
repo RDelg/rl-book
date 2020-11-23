@@ -33,9 +33,9 @@ class Space:
         if isinstance(max, list) and len(max) != dims:
             raise ValueError(f"max length ({len(max)}) doesn't match dims ({dims})")
         self.dims = dims
-        to_list = lambda x: [x for _ in range(dims)]
-        self.min = to_list(min) if isinstance(min, int) and dims > 1 else min
-        self.max = to_list(max) if isinstance(max, int) and dims > 1 else max
+        to_ndarray = lambda x: np.array([x for _ in range(dims)], dtype=np.int32)
+        self.min = to_ndarray(min) if isinstance(min, int) else min
+        self.max = to_ndarray(max) if isinstance(max, int) else max
 
 
 class Enviroment(metaclass=ABCMeta):
@@ -169,3 +169,37 @@ class BlackJack(Enviroment):
                 return False, 0, self.state
         else:
             raise Exception(f"Invalid action: {action}")
+
+
+class SingleState(metaclass=ABCMeta):
+    _RIGHT_ACTION = 1
+    _LEFT_ACTION = 0
+    _ACTIONS = np.array([_RIGHT_ACTION, _LEFT_ACTION], dtype=np.int32)
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.state = (0,)
+
+    def step(self, action: int) -> Tuple[bool, float, Tuple[int, ...]]:
+        if action == self._RIGHT_ACTION:
+            return True, 0.0, None
+        elif action == self._LEFT_ACTION:
+            if np.random.uniform() < 0.1:
+                return True, 1.0, None
+            else:
+                return False, 0.0, self.state
+        else:
+            raise Exception(f"Invalid action: {action}")
+
+    def legal_actions(self, state: Tuple[int, ...]) -> np.ndarray:
+        return self._ACTIONS
+
+    @staticmethod
+    def obs_space() -> Space:
+        return Space(dims=1, min=0, max=0)
+
+    @staticmethod
+    def act_space() -> Space:
+        return Space(dims=1, min=0, max=1)
