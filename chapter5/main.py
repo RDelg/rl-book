@@ -1,3 +1,7 @@
+import multiprocessing
+import concurrent.futures
+
+
 import numpy as np
 import seaborn as sns
 from tqdm import trange, tqdm
@@ -159,11 +163,24 @@ def figure_5_3(figsize=(12, 12)):
     fig.savefig("figure_5_3.png", dpi=100)
 
 
-def figure_5_4(figsize=(12, 12)):
+def run_prediction(target_policy, iters_arr, seed):
+    np.random.seed(seed)
     env = SingleState()
+    controller = MonteCarloController(env)
+    Vs = []
+    for iters in iters_arr:
+        controller.off_policy_ordinary_predict(
+            target_policy,
+            epsilon=1.0,
+            iters=iters,
+            disable_tqdm=True,
+        )
+        Vs.append(controller.V[0])
+    return Vs
 
+
+def figure_5_4(figsize=(12, 12)):
     target_policy = np.zeros((1,), dtype=np.int32)
-
     iters_base = [10 ** x for x in range(7)]
     iters_arr = np.unique(
         np.concatenate(
@@ -176,21 +193,19 @@ def figure_5_4(figsize=(12, 12)):
     iters_run = [iters_arr[0]] + np.diff(iters_arr).tolist()
     runs = 10
 
-    controllers = [MonteCarloController(env) for _ in range(runs)]
     run_Vs = []
-    for iterations in tqdm(iters_run):
-        iter_Vs = []
-        for mc in tqdm(controllers, desc="Controller", leave=False):
-            mc.off_policy_ordinary_predict(
-                target_policy,
-                epsilon=1.0,
-                iters=iterations,
-                disable_tqdm=True,
-            )
-            iter_Vs.append(mc.V[0])
-        run_Vs.append(iter_Vs)
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=multiprocessing.cpu_count()
+    ) as executor:
+        future_to_V = {
+            executor.submit(run_prediction, target_policy, iters_run, i): i
+            for i in range(runs)
+        }
+        for future in tqdm(concurrent.futures.as_completed(future_to_V), total=runs):
+            i = future_to_V[future]
+            run_Vs.append(future.result())
 
-    run_Vs = np.array(run_Vs)
+    run_Vs = np.array(run_Vs).T
 
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111)
