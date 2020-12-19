@@ -181,7 +181,7 @@ def run_prediction(target_policy, iters_arr, seed):
 
 def figure_5_4(figsize=(12, 12)):
     target_policy = np.zeros((1,), dtype=np.int32)
-    iters_base = [10 ** x for x in range(7)]
+    iters_base = [10 ** x for x in range(8)]
     iters_arr = np.unique(
         np.concatenate(
             [
@@ -195,7 +195,7 @@ def figure_5_4(figsize=(12, 12)):
 
     run_Vs = []
     with concurrent.futures.ProcessPoolExecutor(
-        max_workers=multiprocessing.cpu_count()
+        max_workers=multiprocessing.cpu_count() * 2
     ) as executor:
         future_to_V = {
             executor.submit(run_prediction, target_policy, iters_run, i): i
