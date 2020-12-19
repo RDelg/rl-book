@@ -147,18 +147,16 @@ class MonteCarloController:
                 G += trajectory[i + 1].reward
                 _, s, a, _ = trajectory[i]
                 s_a_idx = self.state_action_to_idx(s, a)
-                # self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / (it + 1))
-                if self.Q_reg.get(s_a_idx, None) is None:
-                    self.Q_reg[s_a_idx] = [G * W]
-                else:
-                    self.Q_reg[s_a_idx].append(G * W)
+                self.N[s_a_idx] += 1
                 W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
-                if W == 0.0:
-                    break
+                if W != 0.0:
+                    if self.Q_reg.get(s_a_idx, None) is None:
+                        self.Q_reg[s_a_idx] = [G * W]
+                    else:
+                        self.Q_reg[s_a_idx].append(G * W)
 
-        self.cum_iters += iters
         for key in self.Q_reg.keys():
-            self.Q[key] = np.sum(self.Q_reg[key]) / self.cum_iters
+            self.Q[key] = np.sum(self.Q_reg[key]) / self.N[key]
 
     def off_policy_improvement(
         self,

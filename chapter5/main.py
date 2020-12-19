@@ -151,7 +151,7 @@ def figure_5_3(figsize=(12, 12)):
     ax.plot(iters_arr, err_w, color="red", label="Weighted importance sampling")
     ax.plot(iters_arr, err_o, color="green", label="Ordinary importance sampling")
     ax.set_xscale("log")
-    ax.set_ylim([-0.1, 6])
+    ax.set_ylim([-0.1, 5.0])
     ax.legend(fontsize=20)
     ax.set_ylabel("Mean square error (average over 100 runs)", size=20)
     ax.set_xlabel("Episodes (log scale)", size=20)
@@ -164,16 +164,7 @@ def figure_5_4(figsize=(12, 12)):
 
     target_policy = np.zeros((1,), dtype=np.int32)
 
-    # mc = MonteCarloController(env)
-    # mc.off_policy_ordinary_predict(
-    #     target_policy,
-    #     epsilon=1.0,
-    #     iters=10000,
-    #     disable_tqdm=True,
-    # )
-    # print(mc.Q, mc.V)
-
-    iters_base = [10 ** x for x in range(6)]
+    iters_base = [10 ** x for x in range(7)]
     iters_arr = np.unique(
         np.concatenate(
             [
@@ -183,7 +174,7 @@ def figure_5_4(figsize=(12, 12)):
         )
     )
     iters_run = [iters_arr[0]] + np.diff(iters_arr).tolist()
-    runs = 3
+    runs = 10
 
     controllers = [MonteCarloController(env) for _ in range(runs)]
     run_Vs = []
@@ -200,18 +191,23 @@ def figure_5_4(figsize=(12, 12)):
         run_Vs.append(iter_Vs)
 
     run_Vs = np.array(run_Vs)
-    print(run_Vs)
 
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111)
 
     ax.plot(iters_arr, run_Vs)
     ax.set_xscale("log")
+    ax.set_ylabel(
+        "Monte-Carlo estimate of $v_\\pi(s)$ with ordinary importance sampling (ten runs)",
+        size=20,
+    )
+    ax.set_xlabel("Episodes (log scale)", size=20)
+    ax.set_ylim([-0.1, 4.0])
     fig.savefig("figure_5_4.png", dpi=100)
 
 
 if __name__ == "__main__":
-    # figure_5_1()
-    # figure_5_2()
-    # figure_5_3()
+    figure_5_1()
+    figure_5_2()
+    figure_5_3()
     figure_5_4()
