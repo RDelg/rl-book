@@ -51,8 +51,7 @@ class MonteCarloController:
         while not finished:
             action_prob = policy[self.state_to_idx(current_state)]
             action = np.random.choice(
-                self.env.legal_actions(current_state),
-                p=action_prob,
+                self.env.legal_actions(current_state), p=action_prob,
             )
             trajectory.add_step(finished, current_state, action, reward)
             finished, reward, new_state = self.env.step(action)

@@ -1,6 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
-from functools import lru_cache
 from typing import List, Union, Tuple
 from dataclasses import dataclass
 
@@ -116,7 +114,7 @@ class BlackJack(Enviroment):
             self.dealer_card.value,
         )
 
-    def legal_actions(self, state: Tuple[int, int, int]) -> np.ndarray:
+    def legal_actions(self) -> np.ndarray:
         return self._ACTIONS
 
     @state.setter
@@ -149,26 +147,26 @@ class BlackJack(Enviroment):
         return dealer_sum
 
     def step(self, action: int) -> Tuple[bool, float, Tuple[int, int, int]]:
-        if action == 0:  # Sticks
-            dealer_sum = self._stick()
-            if dealer_sum > 21:  # Dealer bust
-                return True, 1, self.state[:2] + (dealer_sum,)
-            elif dealer_sum == self.player_sum:
-                return True, -1, self.state[:2] + (dealer_sum,)
-            elif dealer_sum < self.player_sum:
-                return True, 1, self.state[:2] + (dealer_sum,)
-            else:
-                return True, -1, self.state[:2] + (dealer_sum,)
-        elif action == 1:  # Hits
+        assert isinstance(action, int)
+        assert 0 <= action <= 1
+        if action:  # Hit
             self.player_sum, self.usable_ace = self._hit(
                 self.player_sum, self.usable_ace
             )
-            if self.player_sum > 21:  # Bust
-                return True, -1, self.state
+            if self.player_sum > 21:
+                done = True
+                reward = -1
             else:
-                return False, 0, self.state
-        else:
-            raise Exception(f"Invalid action: {action}")
+                done = False
+                reward = 0
+        else:  # Stick
+            dealer_sum = self._stick()
+            done = True
+            if dealer_sum > 21 or dealer_sum < self.player_sum:
+                reward = 1
+            else:
+                reward = -1
+        return done, reward, self.state
 
 
 class SingleState(metaclass=ABCMeta):
