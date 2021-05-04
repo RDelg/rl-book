@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Union, Tuple
 from dataclasses import dataclass
 
-
+from .types import Observation, State
 import numpy as np
 
 
@@ -38,11 +38,11 @@ class Space:
 
 class Enviroment(metaclass=ABCMeta):
     @abstractmethod
-    def step(self, action: int) -> Tuple[bool, float, Tuple[int, ...]]:
+    def step(self, action: int) -> Observation:
         raise NotImplementedError
 
     @abstractmethod
-    def legal_actions(self, state: Tuple[int, ...]) -> np.ndarray:
+    def legal_actions(self, state: State) -> np.ndarray:
         raise NotImplementedError
 
     @staticmethod
@@ -114,7 +114,7 @@ class BlackJack(Enviroment):
             self.dealer_card.value,
         )
 
-    def legal_actions(self) -> np.ndarray:
+    def legal_actions(self, _: State) -> np.ndarray:
         return self._ACTIONS
 
     @state.setter
@@ -146,8 +146,12 @@ class BlackJack(Enviroment):
             dealer_sum, dealer_usable_ace = self._hit(dealer_sum, dealer_usable_ace)
         return dealer_sum
 
-    def step(self, action: int) -> Tuple[bool, float, Tuple[int, int, int]]:
-        assert isinstance(action, int)
+    def step(self, action: int) -> Observation:
+        assert (
+            isinstance(action, int)
+            or isinstance(action, (np.generic, np.ndarray))
+            and (action.dtype.char in np.typecodes["AllInteger"] and action.shape == ())
+        )
         assert 0 <= action <= 1
         if action:  # Hit
             self.player_sum, self.usable_ace = self._hit(
@@ -166,7 +170,7 @@ class BlackJack(Enviroment):
                 reward = 1
             else:
                 reward = -1
-        return done, reward, self.state
+        return done, self.state, reward
 
 
 class SingleState(metaclass=ABCMeta):
@@ -180,14 +184,14 @@ class SingleState(metaclass=ABCMeta):
     def reset(self):
         self.state = (0,)
 
-    def step(self, action: int) -> Tuple[bool, float, Tuple[int, ...]]:
+    def step(self, action: int) -> Observation:
         if action == self._RIGHT_ACTION:
-            return True, 0.0, None
+            return True, None, 0.0
         elif action == self._LEFT_ACTION:
             if np.random.uniform() < 0.1:
-                return True, 1.0, None
+                return True, None, 1.0
             else:
-                return False, 0.0, self.state
+                return False, self.state, 0.0
         else:
             raise Exception(f"Invalid action: {action}")
 

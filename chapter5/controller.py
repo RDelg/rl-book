@@ -1,24 +1,40 @@
-from typing import Tuple, Optional
+from abc import ABCMeta, abstractmethod
+from typing import Optional
 
 import numpy as np
 from tqdm import trange
 
 from .env import Enviroment
-from .trajectory import Trajectory
+from .types import StateIndex, Trajectory, State, StateAction, StateActionIndex
 
 
-class MonteCarloController:
-    """Monte Carlo State Action Value Controller"""
-
+class DiscreteController(metaclass=ABCMeta):
     def __init__(self, env: Enviroment):
         self.env = env
         self._obs_space = env.obs_space()
         self._act_space = env.act_space()
         if self._act_space.dims > 1:
             raise ValueError(
-                "MonteCarloController doesn't support more than one dimention in the action space"
+                "DiscreteController doesn't support more than one dimention in the action space"
             )
         self._n_actions = (self._act_space.max - self._act_space.min + 1)[0]
+
+    @abstractmethod
+    def reset(self):
+        raise NotImplementedError
+
+    def state_to_idx(self, state: State) -> StateIndex:
+        return tuple(x - y for x, y in zip(state, self._obs_space.min))
+
+    def state_action_to_idx(self, state: StateAction, action: int) -> StateActionIndex:
+        return tuple(x - y for x, y in zip(state, self._obs_space.min)) + (action,)
+
+
+class MonteCarloController(DiscreteController):
+    """Monte Carlo State Action Value Controller"""
+
+    def __init__(self, env: Enviroment):
+        super(MonteCarloController, self).__init__(env)
         self.reset()
 
     def reset(self):
@@ -30,16 +46,8 @@ class MonteCarloController:
         self.N = np.zeros_like(self.Q, dtype=np.int32)
         self.cum_iters = 0
 
-    def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
-        return tuple(x - y for x, y in zip(state, self._obs_space.min))
-
-    def state_action_to_idx(
-        self, state: Tuple[int, ...], action: int
-    ) -> Tuple[int, ...]:
-        return tuple(x - y for x, y in zip(state, self._obs_space.min)) + (action,)
-
     def generate_episode(
-        self, policy: np.ndarray, init_state: Optional[Tuple[int, ...]] = None
+        self, policy: np.ndarray, init_state: Optional[State] = None
     ) -> Trajectory:
         if init_state is not None:
             self.env.state = init_state
@@ -53,10 +61,10 @@ class MonteCarloController:
             action = np.random.choice(
                 self.env.legal_actions(current_state), p=action_prob,
             )
-            trajectory.add_step(finished, current_state, action, reward)
-            finished, reward, new_state = self.env.step(action)
+            trajectory.add_step(finished, current_state, reward, action)
+            finished, new_state, reward = self.env.step(action)
             current_state = new_state
-        trajectory.add_step(finished, current_state, None, reward)
+        trajectory.add_step(finished, current_state, reward, None)
         return trajectory
 
     @staticmethod
@@ -80,7 +88,7 @@ class MonteCarloController:
         policy: np.ndarray,
         iters: int = 1,
         epsilon: float = 0.3,
-        init_state: Optional[Tuple[int, ...]] = None,
+        init_state: Optional[State] = None,
         disable_tqdm: bool = False,
     ):
         for _ in trange(iters, disable=disable_tqdm):
@@ -90,7 +98,7 @@ class MonteCarloController:
             for i in range(len(trajectory) - 2, -1, -1):
                 G += trajectory[i + 1].reward
                 previous_states.pop()
-                _, s, a, _ = trajectory[i]
+                _, s, _, a = trajectory[i]
                 # First visit
                 if s + (a,) not in previous_states:
                     s_a_idx = self.state_action_to_idx(s, a)
@@ -107,7 +115,7 @@ class MonteCarloController:
         target_policy: np.ndarray,
         iters: int = 1,
         epsilon: float = 0.3,
-        init_state: Optional[Tuple[int, ...]] = None,
+        init_state: Optional[State] = None,
         disable_tqdm: bool = False,
     ):
         b_policy = self.generate_soft_policy(
@@ -119,7 +127,7 @@ class MonteCarloController:
             W = 1.0
             for i in range(len(trajectory) - 2, -1, -1):
                 G += trajectory[i + 1].reward
-                _, s, a, _ = trajectory[i]
+                _, s, _, a = trajectory[i]
                 s_a_idx = self.state_action_to_idx(s, a)
                 self.C[s_a_idx] += W
                 self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / self.C[s_a_idx])
@@ -132,7 +140,7 @@ class MonteCarloController:
         target_policy: np.ndarray,
         iters: int = 1,
         epsilon: float = 0.3,
-        init_state: Optional[Tuple[int, ...]] = None,
+        init_state: Optional[State] = None,
         disable_tqdm: bool = False,
     ):
         b_policy = self.generate_soft_policy(
@@ -144,7 +152,7 @@ class MonteCarloController:
             W = 1.0
             for i in range(len(trajectory) - 2, -1, -1):
                 G += trajectory[i + 1].reward
-                _, s, a, _ = trajectory[i]
+                _, s, _, a = trajectory[i]
                 s_a_idx = self.state_action_to_idx(s, a)
                 self.WG[s_a_idx] += W * G
                 self.N[s_a_idx] += 1
@@ -165,7 +173,7 @@ class MonteCarloController:
         target_policy: np.ndarray,
         iters: int = 1,
         epsilon: float = 0.3,
-        init_state: Optional[Tuple[int, ...]] = None,
+        init_state: Optional[State] = None,
         disable_tqdm: bool = False,
     ):
         for _ in trange(iters, disable=disable_tqdm):
@@ -177,7 +185,7 @@ class MonteCarloController:
             W = 1
             for i in range(len(trajectory) - 2, -1, -1):
                 G += trajectory[i + 1].reward
-                _, s, a, _ = trajectory[i]
+                _, s, _, a = trajectory[i]
                 s_a_idx = self.state_action_to_idx(s, a)
                 self.C[s_a_idx] += W
                 self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / self.C[s_a_idx])
@@ -187,11 +195,11 @@ class MonteCarloController:
             target_policy[...] = self.Q.argmax(-1)
 
     @property
-    def greedy_policy(self):
+    def greedy_policy(self) -> np.ndarray:
         return self.Q.argmax(-1)
 
     @property
-    def V(self):
+    def V(self) -> np.ndarray:
         return self.Q.max(-1)
 
     def get_policy_value(self, greedy_policy: np.ndarray) -> np.ndarray:

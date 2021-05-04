@@ -1,16 +1,12 @@
 from abc import ABCMeta
 from typing import Callable
-from typing import Tuple, Optional
+from typing import Optional
 
 import numpy as np
 from tqdm import trange
 
 from .env import Enviroment
-from .trajectory import Trajectory
-
-
-State = Tuple[int, ...]
-StateIndex = Tuple[int, ...]
+from .types import State, StateIndex, Trajectory
 
 
 class Predictor(metaclass=ABCMeta):
@@ -54,10 +50,10 @@ class MonteCarloPredictor(Predictor):
         reward = 0
         while not finished:
             action = policy(current_state)
-            trajectory.add_step(finished, current_state, action, reward)
-            finished, reward, new_state = self.env.step(action)
+            trajectory.add_step(finished, current_state, reward, action)
+            finished, new_state, reward = self.env.step(action)
             current_state = new_state
-        trajectory.add_step(finished, current_state, None, reward)
+        trajectory.add_step(finished, current_state, reward, None)
         return trajectory
 
     def predict_on_policy(

@@ -198,9 +198,11 @@ def figure_5_4(figsize=(12, 12)):
             executor.submit(run_prediction, target_policy, iters_run, i): i
             for i in range(runs)
         }
-        for future in tqdm(concurrent.futures.as_completed(future_to_V), total=runs):
-            i = future_to_V[future]
-            run_Vs.append(future.result())
+    for future in tqdm(
+        concurrent.futures.as_completed(future_to_V), total=runs, disable=False
+    ):
+        _ = future_to_V[future]
+        run_Vs.append(future.result())
 
     run_Vs = np.array(run_Vs).T
 
