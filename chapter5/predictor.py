@@ -1,16 +1,19 @@
+from abc import ABCMeta
 from typing import Callable
 from typing import Tuple, Optional
 
 import numpy as np
 from tqdm import trange
 
-from env import Enviroment
-from trajectory import Trajectory
+from .env import Enviroment
+from .trajectory import Trajectory
 
 
-class MonteCarloPredictor:
-    """Monte Carlo State Value Predictor"""
+State = Tuple[int, ...]
+StateIndex = Tuple[int, ...]
 
+
+class Predictor(metaclass=ABCMeta):
     def __init__(self, env: Enviroment):
         self.env = env
         self._obs_space = env.obs_space()
@@ -25,14 +28,21 @@ class MonteCarloPredictor:
         self.V = np.zeros(shape=shape, dtype=np.float32)
         self.N = np.zeros_like(self.V, dtype=np.int32)
 
-    def idx_to_state(self, idx: Tuple[int, ...]) -> Tuple[int, ...]:
+    def idx_to_state(self, idx: StateIndex) -> State:
         return tuple(x + y for x, y in zip(idx, self._obs_space.min))
 
-    def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
+    def state_to_idx(self, state: StateIndex) -> State:
         return tuple(x - y for x, y in zip(state, self._obs_space.min))
 
+
+class MonteCarloPredictor(Predictor):
+    """Monte Carlo State Value Predictor"""
+
+    def __init__(self, env: Enviroment):
+        super(MonteCarloPredictor, self).__init__(env)
+
     def generate_episode(
-        self, policy: Callable, init_state: Optional[Tuple[int, ...]] = None
+        self, policy: Callable[[np.ndarray], int], init_state: Optional[State] = None,
     ) -> Trajectory:
         if init_state is None:
             self.env.reset()
@@ -52,9 +62,9 @@ class MonteCarloPredictor:
 
     def predict_on_policy(
         self,
-        policy: Callable,
+        policy: Callable[[np.ndarray], int],
         n_iters: int = 1,
-        init_state: Optional[Tuple[int, ...]] = None,
+        init_state: Optional[State] = None,
     ):
         for _ in trange(n_iters):
             trajectory = self.generate_episode(policy, init_state=init_state)
@@ -68,3 +78,11 @@ class MonteCarloPredictor:
                     s_idx = self.state_to_idx(s)
                     self.N[s_idx] += 1
                     self.V[s_idx] += (G - self.V[s_idx]) / self.N[s_idx]
+
+
+class TDPredictor(Predictor):
+    """TD State Value Predictor"""
+
+    def __init__(self, env: Enviroment):
+        super(TDPredictor, self).__init__(env)
+
