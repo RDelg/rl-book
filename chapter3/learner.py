@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.table import Table
 
-from maze import Enviroment
+from .maze import Enviroment
 
 
 class ValueLearner(object):

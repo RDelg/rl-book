@@ -2,7 +2,7 @@ from typing import Union, List
 
 import numpy as np
 
-from env import Enviroment
+from .env import Enviroment
 
 
 class KBanditLearner:

@@ -2,8 +2,8 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from maze import Maze
-from learner import ValueLearner
+from chapter3.maze import Maze
+from chapter3.learner import ValueLearner
 
 
 def figure_3_2(maze: Maze, discount: float):

@@ -4,8 +4,8 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from env import KBandit
-from learner import KBanditLearner
+from chapter2.env import KBandit
+from chapter2.learner import KBanditLearner
 
 
 class Experiment:

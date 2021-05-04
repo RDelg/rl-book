@@ -3,7 +3,7 @@ from typing import Type, Tuple, Optional
 import numpy as np
 from tqdm import tqdm
 
-from env import Enviroment
+from .env import Enviroment
 
 
 class DynamicPolicyLearner:
@@ -113,9 +113,7 @@ class DynamicPolicyLearner:
             delta = 0
             old_value = self.value.copy()
             with np.nditer(
-                [self.value],
-                flags=["multi_index"],
-                op_flags=[["readwrite"]],
+                [self.value], flags=["multi_index"], op_flags=[["readwrite"]],
             ) as it:
                 for val in tqdm(
                     it,
