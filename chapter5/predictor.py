@@ -56,7 +56,7 @@ class MonteCarloPredictor(Predictor):
         trajectory.add_step(finished, current_state, reward, None)
         return trajectory
 
-    def predict_on_policy(
+    def predict(
         self,
         policy: Callable[[np.ndarray], int],
         n_iters: int = 1,

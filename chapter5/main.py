@@ -52,7 +52,7 @@ def figure_5_1(figsize=(12, 12)):
     policy = lambda state: state[0] < 20
     for i, it in enumerate([10_000, 500_000]):
         mc = MonteCarloPredictor(env)
-        mc.predict_on_policy(policy, n_iters=it)
+        mc.predict(policy, n_iters=it)
         plot_state_value(
             mc.V[:, 1, :],
             fig.add_subplot(2, 2, 1 + i, projection="3d"),
@@ -128,14 +128,14 @@ def figure_5_3(figsize=(12, 12)):
         mc_w = MonteCarloController(env)
         mc_o = MonteCarloController(env)
         for iterations in tqdm(iters_run):
-            mc_w.off_policy_weighted_predict(
+            mc_w.weighted_predict(
                 target_policy,
                 epsilon=1.0,
                 iters=iterations,
                 init_state=init_state,
                 disable_tqdm=True,
             )
-            mc_o.off_policy_ordinary_predict(
+            mc_o.ordinary_predict(
                 target_policy,
                 epsilon=1.0,
                 iters=iterations,
@@ -169,7 +169,7 @@ def run_prediction(target_policy, iters_arr, seed):
     controller = MonteCarloController(env)
     Vs = []
     for iters in iters_arr:
-        controller.off_policy_ordinary_predict(
+        controller.ordinary_predict(
             target_policy, epsilon=1.0, iters=iters, disable_tqdm=True,
         )
         Vs.append(controller.V[0])

@@ -110,7 +110,7 @@ class MonteCarloController(DiscreteController):
                         n_actions=self._n_actions,
                     )
 
-    def off_policy_weighted_predict(
+    def weighted_predict(
         self,
         target_policy: np.ndarray,
         iters: int = 1,
@@ -135,7 +135,7 @@ class MonteCarloController(DiscreteController):
                 if W == 0.0:
                     break
 
-    def off_policy_ordinary_predict(
+    def ordinary_predict(
         self,
         target_policy: np.ndarray,
         iters: int = 1,
