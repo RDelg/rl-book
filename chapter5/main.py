@@ -8,9 +8,9 @@ from tqdm import trange, tqdm
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from env import BlackJack, SingleState
-from predictor import MonteCarloPredictor
-from controller import MonteCarloController
+from chapter5.env import BlackJack, SingleState
+from chapter5.predictor import MonteCarloPredictor
+from chapter5.controller import MonteCarloController
 
 
 def plot_state_value(value, ax=None, title="Value"):
@@ -170,10 +170,7 @@ def run_prediction(target_policy, iters_arr, seed):
     Vs = []
     for iters in iters_arr:
         controller.off_policy_ordinary_predict(
-            target_policy,
-            epsilon=1.0,
-            iters=iters,
-            disable_tqdm=True,
+            target_policy, epsilon=1.0, iters=iters, disable_tqdm=True,
         )
         Vs.append(controller.V[0])
     return Vs

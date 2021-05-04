@@ -3,8 +3,8 @@ from typing import Tuple, Optional
 import numpy as np
 from tqdm import trange
 
-from env import Enviroment
-from trajectory import Trajectory
+from .env import Enviroment
+from .trajectory import Trajectory
 
 
 class MonteCarloController:
