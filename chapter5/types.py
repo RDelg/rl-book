@@ -1,5 +1,5 @@
 from typing import List, Tuple, NamedTuple
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple
 
 
 State = Tuple[int, ...]
@@ -23,7 +23,7 @@ class Observation:
     reward: float
 
     def __iter__(self):
-        return iter((self.is_final, self.state, self.reward))
+        return iter(astuple(self))
 
 
 @dataclass
@@ -31,7 +31,7 @@ class Step(Observation):
     action: int
 
     def __iter__(self):
-        return iter((*super(Step, self).__iter__(), self.action))
+        return iter(astuple(self))
 
 
 class Trajectory:
