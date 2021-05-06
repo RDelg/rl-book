@@ -38,7 +38,7 @@ class Predictor(metaclass=ABCMeta):
 class MonteCarloPredictor(Predictor):
     """Monte Carlo State Value Predictor"""
 
-    def __init__(self, env: Enviroment, gamma: float = 0.99):
+    def __init__(self, env: Enviroment, gamma: float = 1.0):
         super(MonteCarloPredictor, self).__init__(env, gamma)
         self.N = np.zeros_like(self.V, dtype=np.int32)
 
@@ -86,7 +86,7 @@ class MonteCarloPredictor(Predictor):
 class TDPredictor(Predictor):
     """TD State Value Predictor"""
 
-    def __init__(self, env: Enviroment, gamma: float = 0.99):
+    def __init__(self, env: Enviroment, gamma: float = 1.0):
         super(TDPredictor, self).__init__(env, gamma)
 
     def predict(
