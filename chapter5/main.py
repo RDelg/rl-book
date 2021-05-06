@@ -170,7 +170,10 @@ def run_prediction(target_policy, iters_arr, seed):
     Vs = []
     for iters in iters_arr:
         controller.ordinary_predict(
-            target_policy, epsilon=1.0, iters=iters, disable_tqdm=True,
+            target_policy,
+            epsilon=1.0,
+            iters=iters,
+            disable_tqdm=False,
         )
         Vs.append(controller.V[0])
     return Vs
