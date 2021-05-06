@@ -26,7 +26,7 @@ class DiscreteController(metaclass=ABCMeta):
     def state_to_idx(self, state: State) -> StateIndex:
         return tuple(x - y for x, y in zip(state, self._obs_space.min))
 
-    def state_action_to_idx(self, state: StateAction, action: int) -> StateActionIndex:
+    def state_action_to_idx(self, state: State, action: int) -> StateActionIndex:
         return tuple(x - y for x, y in zip(state, self._obs_space.min)) + (action,)
 
 
@@ -59,7 +59,8 @@ class MonteCarloController(DiscreteController):
         while not finished:
             action_prob = policy[self.state_to_idx(current_state)]
             action = np.random.choice(
-                self.env.legal_actions(current_state), p=action_prob,
+                self.env.legal_actions(current_state),
+                p=action_prob,
             )
             trajectory.add_step(finished, current_state, reward, action)
             finished, new_state, reward = self.env.step(action)

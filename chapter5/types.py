@@ -4,16 +4,7 @@ from dataclasses import dataclass, astuple
 
 State = Tuple[int, ...]
 StateIndex = Tuple[int, ...]
-
-
-class StateAction(NamedTuple):
-    state: State
-    action: int
-
-
-class StateActionIndex(NamedTuple):
-    state_idx: StateIndex
-    action_idx: int
+StateActionIndex = Tuple[int, ...]
 
 
 @dataclass
