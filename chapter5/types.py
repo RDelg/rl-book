@@ -1,4 +1,4 @@
-from typing import List, Tuple, NamedTuple
+from typing import List, Tuple, NamedTuple, Iterator, Union
 from dataclasses import dataclass, astuple
 
 
@@ -22,16 +22,15 @@ class Observation:
     state: State
     reward: float
 
-    def __iter__(self):
-        return iter(astuple(self))
-
 
 @dataclass
 class Step(Observation):
     action: int
 
-    def __iter__(self):
-        return iter(astuple(self))
+    def __iter__(self) -> Iterator[Union[bool, State, float, int]]:
+        yield from astuple(self)
+        # the same
+        # return iter(astuple(self))
 
 
 class Trajectory:
@@ -41,13 +40,13 @@ class Trajectory:
     def add_step(self, is_final: bool, state: State, reward: float, action: int):
         self.steps.append(Step(is_final, state, reward, action))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.steps)
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> Step:
         return self.steps[index]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "\n".join(
             [f"t={i}: {step.__dict__}" for i, step in enumerate(self.steps)]
         )
