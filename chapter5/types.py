@@ -13,6 +13,9 @@ class Observation:
     state: State
     reward: float
 
+    def __iter__(self) -> Iterator[Union[bool, State, float]]:
+        yield from astuple(self)
+
 
 @dataclass
 class Step(Observation):

@@ -2,8 +2,25 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Union, Tuple
 from dataclasses import dataclass
 
-from .types import Observation, State
 import numpy as np
+
+from .types import Observation, State
+
+
+class Discrete:
+    def __init__(self, n: int, minimum: int = 0):
+        self.n = n
+        self.minimum = minimum
+
+    def contains(self, x: Union[int, np.ndarray]) -> bool:
+        if isinstance(x, (np.generic, np.ndarray)) and (
+            x.dtype.char in np.typecodes["AllInteger"] and x.shape == ()
+        ):
+            x = int(x)
+        if not isinstance(x, int):
+            return False
+        else:
+            return x - self.minimum <= self.n
 
 
 class Space:
@@ -35,8 +52,25 @@ class Space:
         self.min = to_ndarray(min) if isinstance(min, int) else min
         self.max = to_ndarray(max) if isinstance(max, int) else max
 
+    def contains(self, x: List[int]) -> bool:
+        if len(x) != self.dims:
+            return False
+        else:
+            for v, _min, _max in zip(x, self.min, self.max):
+                if x < _min or x > _max:
+                    return False
+        return True
+
 
 class Enviroment(metaclass=ABCMeta):
+    def __init__(self):
+        self._obs_space = None
+        self._act_space = None
+
+    @abstractmethod
+    def reset(self) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     def step(self, action: int) -> Observation:
         raise NotImplementedError
@@ -45,15 +79,13 @@ class Enviroment(metaclass=ABCMeta):
     def legal_actions(self, state: State) -> np.ndarray:
         raise NotImplementedError
 
-    @staticmethod
-    @abstractmethod
-    def obs_space() -> Space:
-        raise NotImplementedError
+    @property
+    def obs_space(self) -> Space:
+        return self._obs_space
 
-    @staticmethod
-    @abstractmethod
-    def act_space() -> Space:
-        raise NotImplementedError
+    @property
+    def act_space(self) -> Space:
+        return self._act_space
 
 
 class BlackJack(Enviroment):
@@ -80,9 +112,9 @@ class BlackJack(Enviroment):
         Card("K", 10),
     ]
 
-    _ACTIONS = np.array([0, 1], dtype=np.int32)
-
     def __init__(self):
+        self._act_spac = Space(dims=1, min=0, max=1)
+        self._obs_spac = Space(dims=3, min=[12, 0, 1], max=[21, 1, 10])
         self.reset()
 
     def reset(self):
@@ -94,20 +126,12 @@ class BlackJack(Enviroment):
         self.usable_ace = False
         self.player_sum, self.usable_ace = self._hit(self.player_sum, self.usable_ace)
 
-    def _get_card(self):
+    def _get_card(self) -> "BlackJack.Card":
         # pylint: disable=invalid-sequence-index
         return self._CARDS[np.random.randint(0, 12)]
 
-    @staticmethod
-    def act_space() -> Space:
-        return Space(dims=1, min=0, max=1)
-
-    @staticmethod
-    def obs_space() -> Space:
-        return Space(dims=3, min=[12, 0, 1], max=[21, 1, 10])
-
     @property
-    def state(self):
+    def state(self) -> State:
         return (
             self.player_sum,
             int(self.usable_ace),
@@ -124,7 +148,7 @@ class BlackJack(Enviroment):
         self.dealer_card = [c for c in self._CARDS if c.value == state[2]][0]
         self._dealer_usable_ace = self.dealer_card.letter == "A"
 
-    def _hit(self, current_sum: int, usable_ace: bool):
+    def _hit(self, current_sum: int, usable_ace: bool) -> Tuple[int, bool]:
         card = self._get_card()
         if card.letter == "A" and not usable_ace and current_sum < 11:
             current_sum += 11
@@ -139,7 +163,7 @@ class BlackJack(Enviroment):
         else:
             return current_sum, usable_ace
 
-    def _stick(self):
+    def _stick(self) -> int:
         dealer_usable_ace = self._dealer_usable_ace
         dealer_sum = 11 if dealer_usable_ace else self.dealer_card.value
         while dealer_sum < self._DEALER_THRESHOLD:
@@ -170,15 +194,16 @@ class BlackJack(Enviroment):
                 reward = 1
             else:
                 reward = -1
-        return done, self.state, reward
+        return Observation(done, self.state, reward)
 
 
 class SingleState(metaclass=ABCMeta):
     _RIGHT_ACTION = 1
     _LEFT_ACTION = 0
-    _ACTIONS = np.array([_RIGHT_ACTION, _LEFT_ACTION], dtype=np.int32)
 
     def __init__(self):
+        self._obs_spac = Space(dims=1, min=0, max=0)
+        self._act_spac = Space(dims=1, min=0, max=1)
         self.reset()
 
     def reset(self):
@@ -186,22 +211,17 @@ class SingleState(metaclass=ABCMeta):
 
     def step(self, action: int) -> Observation:
         if action == self._RIGHT_ACTION:
-            return True, None, 0.0
+            done = True
+            reward = 0
         elif action == self._LEFT_ACTION:
             if np.random.uniform() < 0.1:
-                return True, None, 1.0
+                done = True
+                reward = 1
             else:
-                return False, self.state, 0.0
-        else:
-            raise Exception(f"Invalid action: {action}")
+                done = False
+                reward = 0
 
-    def legal_actions(self, state: Tuple[int, ...]) -> np.ndarray:
+        return Observation(done, self.state, reward)
+
+    def legal_actions(self, state: State) -> np.ndarray:
         return self._ACTIONS
-
-    @staticmethod
-    def obs_space() -> Space:
-        return Space(dims=1, min=0, max=0)
-
-    @staticmethod
-    def act_space() -> Space:
-        return Space(dims=1, min=0, max=1)
