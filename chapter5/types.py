@@ -1,5 +1,4 @@
-from typing import List, Tuple, NamedTuple, Iterator, Union
-from dataclasses import dataclass, astuple
+from typing import List, Tuple, NamedTuple
 
 
 State = Tuple[int, ...]
@@ -7,21 +6,17 @@ StateIndex = Tuple[int, ...]
 StateActionIndex = Tuple[int, ...]
 
 
-@dataclass
-class Observation:
+class Observation(NamedTuple):
     is_final: bool
     state: State
     reward: float
 
 
-@dataclass
-class Step(Observation):
+class Step(NamedTuple):
+    is_final: bool
+    state: State
+    reward: float
     action: int
-
-    def __iter__(self) -> Iterator[Union[bool, State, float, int]]:
-        yield from astuple(self)
-        # the same
-        # return iter(astuple(self))
 
 
 class Trajectory:

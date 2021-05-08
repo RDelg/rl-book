@@ -13,22 +13,18 @@ class Predictor(metaclass=ABCMeta):
     def __init__(self, env: Enviroment, gamma: float = 0.99):
         self.env = env
         self.gamma = gamma
-        self._obs_space = env.obs_space()
-        self._act_space = env.act_space()
         self.reset()
 
     def reset(self):
-        shape = [
-            _max - _min + 1
-            for _max, _min in zip(self._obs_space.max, self._obs_space.min)
-        ]
+        shape = [dim.n + 1 for dim in self.env.obs_space]
+        self._obs_space_mins = [x.minimum for x in self.env.obs_space.dims]
         self.V = np.zeros(shape=shape, dtype=np.float32)
 
     def idx_to_state(self, idx: StateIndex) -> State:
-        return tuple(x + y for x, y in zip(idx, self._obs_space.min))
+        return tuple(x + _min for x, _min in zip(idx, self._obs_space_mins))
 
     def state_to_idx(self, state: StateIndex) -> State:
-        return tuple(x - y for x, y in zip(state, self._obs_space.min))
+        return tuple(x - _min for x, _min in zip(state, self._obs_space_mins))
 
     @abstractmethod
     def predict(self) -> None:
