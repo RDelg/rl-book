@@ -5,29 +5,23 @@ import numpy as np
 from tqdm import trange
 
 from .env import Enviroment
-from .types import StateIndex, Trajectory, State, StateAction, StateActionIndex
+from .types import StateIndex, Trajectory, State, StateActionIndex
 
 
 class DiscreteController(metaclass=ABCMeta):
     def __init__(self, env: Enviroment):
         self.env = env
-        self._obs_space = env.obs_space()
-        self._act_space = env.act_space()
-        if self._act_space.dims > 1:
-            raise ValueError(
-                "DiscreteController doesn't support more than one dimention in the action space"
-            )
-        self._n_actions = (self._act_space.max - self._act_space.min + 1)[0]
+        self._n_actions = self.env.act_space.n + 1
 
     @abstractmethod
     def reset(self):
         raise NotImplementedError
 
     def state_to_idx(self, state: State) -> StateIndex:
-        return tuple(x - y for x, y in zip(state, self._obs_space.min))
+        return tuple(x - dim.minimum for x, dim in zip(state, self.env.obs_space))
 
     def state_action_to_idx(self, state: State, action: int) -> StateActionIndex:
-        return tuple(x - y for x, y in zip(state, self._obs_space.min)) + (action,)
+        return self.state_to_idx(state) + (action,)
 
 
 class MonteCarloController(DiscreteController):
@@ -38,8 +32,8 @@ class MonteCarloController(DiscreteController):
         self.reset()
 
     def reset(self):
-        get_shape = lambda x: [_max - _min + 1 for _max, _min in zip(x.max, x.min)]
-        shape = get_shape(self._obs_space) + [self._n_actions]
+        self.posible_actions = self.env.act_space.to_list()
+        shape = [dim.n + 1 for dim in self.env.obs_space] + [self._n_actions]
         self.Q = np.zeros(shape=shape, dtype=np.float32)
         self.WG = np.zeros(shape=shape, dtype=np.float32)
         self.C = np.zeros_like(self.Q, dtype=np.float32)
@@ -59,7 +53,7 @@ class MonteCarloController(DiscreteController):
         while not finished:
             action_prob = policy[self.state_to_idx(current_state)]
             action = np.random.choice(
-                self.env.legal_actions(current_state),
+                self.posible_actions,
                 p=action_prob,
             )
             trajectory.add_step(finished, current_state, reward, action)

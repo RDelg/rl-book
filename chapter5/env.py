@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Iterator, Iterable
 from dataclasses import dataclass
 
 import numpy as np
@@ -7,7 +7,7 @@ import numpy as np
 from .types import Observation, State
 
 
-class Discrete:
+class DiscreteDim:
     def __init__(self, n: int, minimum: int = 0):
         self.n = n
         self.minimum = minimum
@@ -22,44 +22,27 @@ class Discrete:
         else:
             return x - self.minimum <= self.n
 
+    def to_list(self) -> List[str]:
+        return list(range(self.minimum, self.minimum + self.n + 1))
 
-class Space:
-    """Class represent the action and observation spaces
-    of an enviroment.
 
-    Parameters
-    ----------
-
-    dims : int
-        Dimentions that the space has.
-
-    min : int, list of ints
-        minimum value that the space could have.
-
-    max : int, list of ints
-        maximum value that the space could have.
-    """
-
-    def __init__(
-        self, dims: int, min: Union[int, List[int]], max: Union[int, List[int]]
-    ):
-        if isinstance(min, list) and len(min) != dims:
-            raise ValueError(f"min length ({len(min)}) doesn't match dims ({dims})")
-        if isinstance(max, list) and len(max) != dims:
-            raise ValueError(f"max length ({len(max)}) doesn't match dims ({dims})")
+class DiscreteSpace:
+    def __init__(self, *dims: DiscreteDim):
+        self.n = len(dims)
         self.dims = dims
-        to_ndarray = lambda x: np.array([x for _ in range(dims)], dtype=np.int32)
-        self.min = to_ndarray(min) if isinstance(min, int) else min
-        self.max = to_ndarray(max) if isinstance(max, int) else max
 
-    def contains(self, x: List[int]) -> bool:
-        if len(x) != self.dims:
+    def contains(self, x: Iterable[int]) -> bool:
+        if len(x) != self.n:
             return False
         else:
-            for v, _min, _max in zip(x, self.min, self.max):
-                if x < _min or x > _max:
+            for v, dim in zip(x, self.dims):
+                if not dim.contains(v):
                     return False
         return True
+
+    def __iter__(self) -> Iterator[DiscreteDim]:
+        for dim in self.dims:
+            yield dim
 
 
 class Enviroment(metaclass=ABCMeta):
@@ -75,16 +58,12 @@ class Enviroment(metaclass=ABCMeta):
     def step(self, action: int) -> Observation:
         raise NotImplementedError
 
-    @abstractmethod
-    def legal_actions(self, state: State) -> np.ndarray:
-        raise NotImplementedError
-
     @property
-    def obs_space(self) -> Space:
+    def obs_space(self) -> DiscreteSpace:
         return self._obs_space
 
     @property
-    def act_space(self) -> Space:
+    def act_space(self) -> DiscreteSpace:
         return self._act_space
 
 
@@ -113,8 +92,10 @@ class BlackJack(Enviroment):
     ]
 
     def __init__(self):
-        self._act_spac = Space(dims=1, min=0, max=1)
-        self._obs_spac = Space(dims=3, min=[12, 0, 1], max=[21, 1, 10])
+        self._act_space = DiscreteDim(1)
+        self._obs_space = DiscreteSpace(
+            DiscreteDim(9, minimum=12), DiscreteDim(1), DiscreteDim(9, minimum=1)
+        )
         self.reset()
 
     def reset(self):
@@ -137,9 +118,6 @@ class BlackJack(Enviroment):
             int(self.usable_ace),
             self.dealer_card.value,
         )
-
-    def legal_actions(self, _: State) -> np.ndarray:
-        return self._ACTIONS
 
     @state.setter
     def state(self, state: Tuple[int, int, int]):
@@ -171,12 +149,7 @@ class BlackJack(Enviroment):
         return dealer_sum
 
     def step(self, action: int) -> Observation:
-        assert (
-            isinstance(action, int)
-            or isinstance(action, (np.generic, np.ndarray))
-            and (action.dtype.char in np.typecodes["AllInteger"] and action.shape == ())
-        )
-        assert 0 <= action <= 1
+        assert self.act_space.contains(action), "Invalid action"
         if action:  # Hit
             self.player_sum, self.usable_ace = self._hit(
                 self.player_sum, self.usable_ace
@@ -197,19 +170,20 @@ class BlackJack(Enviroment):
         return Observation(done, self.state, reward)
 
 
-class SingleState(metaclass=ABCMeta):
+class SingleState(Enviroment):
     _RIGHT_ACTION = 1
     _LEFT_ACTION = 0
 
     def __init__(self):
-        self._obs_spac = Space(dims=1, min=0, max=0)
-        self._act_spac = Space(dims=1, min=0, max=1)
+        self._act_space = DiscreteDim(1, minimum=0)
+        self._obs_space = DiscreteSpace(DiscreteDim(1))
         self.reset()
 
     def reset(self):
         self.state = (0,)
 
     def step(self, action: int) -> Observation:
+        assert self.act_space.contains(action), "Invalid action"
         if action == self._RIGHT_ACTION:
             done = True
             reward = 0
@@ -222,6 +196,3 @@ class SingleState(metaclass=ABCMeta):
                 reward = 0
 
         return Observation(done, self.state, reward)
-
-    def legal_actions(self, state: State) -> np.ndarray:
-        return self._ACTIONS

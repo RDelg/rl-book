@@ -1,4 +1,4 @@
-from typing import List, Tuple, NamedTuple, Iterator, Union
+from typing import List, Tuple, Iterator, Union
 from dataclasses import dataclass, astuple
 
 
