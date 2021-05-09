@@ -16,7 +16,7 @@ class Predictor(metaclass=ABCMeta):
         self.reset()
 
     def reset(self):
-        shape = [dim.n + 1 for dim in self.env.obs_space]
+        shape = [dim.n for dim in self.env.obs_space]
         self._obs_space_mins = [x.minimum for x in self.env.obs_space.dims]
         self.V = np.zeros(shape=shape, dtype=np.float32)
 
@@ -77,33 +77,3 @@ class MonteCarloPredictor(Predictor):
                     s_idx = self.state_to_idx(s)
                     self.N[s_idx] += 1
                     self.V[s_idx] += (G - self.V[s_idx]) / self.N[s_idx]
-
-
-class TDPredictor(Predictor):
-    """TD State Value Predictor"""
-
-    def __init__(self, env: Enviroment, gamma: float = 1.0):
-        super(TDPredictor, self).__init__(env, gamma)
-
-    def predict(
-        self,
-        policy: Callable[[np.ndarray], int],
-        alpha: float = 0.01,
-        n_iters: int = 1,
-        init_state: Optional[State] = None,
-    ):
-        for _ in trange(n_iters):
-            if init_state is None:
-                self.env.reset()
-            else:
-                self.env.state = init_state
-            current_state = self.env.state
-            while not finished:
-                action = policy(current_state)
-                finished, new_state, reward = self.env.step(action)
-                c_s_idx = self.state_to_idx(current_state)
-                n_s_idx = self.state_to_idx(new_state)
-                self.V[c_s_idx] += alpha * (
-                    reward + self.gamma * self.V[n_s_idx] - self.V[c_s_idx]
-                )
-                current_state = new_state
