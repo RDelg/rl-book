@@ -62,10 +62,12 @@ class MonteCarloPredictor(Predictor):
     def predict(
         self,
         policy: Callable[[np.ndarray], int],
+        alpha: float = 0.01,
         n_iters: int = 1,
         init_state: Optional[State] = None,
+        disable_tqdm: Optional[bool] = False,
     ):
-        for _ in trange(n_iters):
+        for _ in trange(n_iters, desc="Value prediction iter", disable=disable_tqdm):
             trajectory = self.generate_episode(policy, init_state=init_state)
             G = 0
             previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
@@ -76,4 +78,4 @@ class MonteCarloPredictor(Predictor):
                 if s not in previous_states:
                     s_idx = self.state_to_idx(s)
                     self.N[s_idx] += 1
-                    self.V[s_idx] += (G - self.V[s_idx]) / self.N[s_idx]
+                    self.V[s_idx] += alpha * (G - self.V[s_idx]) / self.N[s_idx]

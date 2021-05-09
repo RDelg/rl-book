@@ -24,8 +24,9 @@ class TDPredictor(Predictor):
         alpha: float = 0.01,
         n_iters: int = 1,
         init_state: Optional[State] = None,
+        disable_tqdm: Optional[bool] = False,
     ):
-        for _ in trange(n_iters):
+        for _ in trange(n_iters, desc="Value prediction iter", disable=disable_tqdm):
             if init_state is None:
                 self.env.reset()
             else:
