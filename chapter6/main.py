@@ -57,15 +57,18 @@ def _parallel_evaluation(n_runs: int, *args):
 
 
 def _figure_6_2_right(n_states, init_value, ax):
+    real_value = np.arange(1, n_states + 1) / (n_states + 1)
+    init_state = 0.5
+
     env = RandomWalk(n_states)
     td_predictor = TDPredictor(env)
     mc_predictor = MonteCarloPredictor(env)
 
-    real_value = np.arange(1, n_states + 1) / (n_states + 1)
+    td_predictor.reset(init_state)
+    mc_predictor.reset(init_state)
 
     n_episodes = 100
     n_runs = 100
-    linestyles = ["--", "-.", ":"]
     # TD
     td_alphas = [0.05, 0.1, 0.15]
     td_avg_error = []
@@ -82,6 +85,8 @@ def _figure_6_2_right(n_states, init_value, ax):
             _parallel_evaluation(n_runs, mc_predictor, real_value, n_episodes, a)
         )
 
+    # Plot
+    linestyles = ["--", "-.", ":"]
     for alpha, avg_error, style in zip(td_alphas, td_avg_error, linestyles):
         ax.plot(
             np.array(avg_error).mean(0),

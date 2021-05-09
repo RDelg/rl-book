@@ -79,3 +79,7 @@ class MonteCarloPredictor(Predictor):
                     s_idx = self.state_to_idx(s)
                     self.N[s_idx] += 1
                     self.V[s_idx] += alpha * (G - self.V[s_idx]) / self.N[s_idx]
+
+    def reset(self, init_value: float = 0.0):
+        super(MonteCarloPredictor, self).reset()
+        self.V[...] = init_value
