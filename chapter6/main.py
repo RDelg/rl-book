@@ -57,14 +57,13 @@ def _parallel_evaluation(n_runs: int, *args):
 
 def _figure_6_2_right(n_states, init_value, ax):
     real_value = np.arange(1, n_states + 1) / (n_states + 1)
-    init_state = 0.5
 
     env = RandomWalk(n_states)
     td_predictor = TDPredictor(env)
     mc_predictor = MonteCarloPredictor(env)
 
-    td_predictor.reset(init_state)
-    mc_predictor.reset(init_state)
+    td_predictor.reset(init_value)
+    mc_predictor.reset(init_value)
 
     n_episodes = 100
     n_runs = 100
