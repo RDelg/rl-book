@@ -1,3 +1,4 @@
+from typing import List
 import multiprocessing
 import concurrent.futures
 
@@ -7,10 +8,10 @@ from tqdm import tqdm
 
 from chapter6.env import RandomWalk
 from chapter6.predictor import TDPredictor
-from chapter5.predictor import MonteCarloPredictor
+from chapter5.predictor import MonteCarloPredictor, Predictor
 
 
-def _figure_6_2_left(n_states, init_value, ax):
+def _figure_6_2_left(ax: plt.Axes, n_states: int, init_value: float):
     env = RandomWalk(n_states)
     policy = lambda _: int(np.random.uniform() < 0.5)
     predictor = TDPredictor(env)
@@ -31,7 +32,9 @@ def _figure_6_2_left(n_states, init_value, ax):
     ax.set_xticklabels([chr(ord("A") + i) for i in range(n_states)])
 
 
-def _evaluate(predictor, real_value, n_episodes, alpha):
+def _evaluate_with_random_policy(
+    predictor: Predictor, real_value: np.ndarray, n_episodes: int, alpha: float
+) -> List[float]:
     loss = lambda prediction: np.sum((real_value - prediction) ** 2)
     policy = lambda _: int(np.random.uniform() < 0.5)
     error_history = [loss(predictor.V)]
@@ -41,21 +44,23 @@ def _evaluate(predictor, real_value, n_episodes, alpha):
     return error_history
 
 
-def _parallel_evaluation(n_runs: int, *args):
+def _parallel_evaluation(n_runs: int, *args) -> np.ndarray:
     run_errors = []
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=multiprocessing.cpu_count() * 2
     ) as executor:
-        future_error = [executor.submit(_evaluate, *args) for _ in range(n_runs)]
+        future_error = [
+            executor.submit(_evaluate_with_random_policy, *args) for _ in range(n_runs)
+        ]
     for future in tqdm(
         concurrent.futures.as_completed(future_error), total=n_runs, disable=False
     ):
         run_errors.append(future.result())
 
-    return run_errors
+    return np.array(run_errors).mean(0)
 
 
-def _figure_6_2_right(n_states, init_value, ax):
+def _figure_6_2_right(ax: plt.Axes, n_states: int, init_value: float):
     real_value = np.arange(1, n_states + 1) / (n_states + 1)
 
     env = RandomWalk(n_states)
@@ -87,7 +92,7 @@ def _figure_6_2_right(n_states, init_value, ax):
     linestyles = ["--", "-.", ":"]
     for alpha, avg_error, style in zip(td_alphas, td_avg_error, linestyles):
         ax.plot(
-            np.array(avg_error).mean(0),
+            avg_error,
             label=f"td alpha {alpha}",
             color="b",
             linestyle=style,
@@ -95,7 +100,7 @@ def _figure_6_2_right(n_states, init_value, ax):
 
     for alpha, avg_error, style in zip(mc_alphas, mc_avg_error, linestyles):
         ax.plot(
-            np.array(avg_error).mean(0),
+            avg_error,
             label=f"mc alpha {alpha}",
             color="r",
             linestyle=style,
@@ -112,9 +117,8 @@ def example_6_2(figsize=(12, 6)):
     # Plot
     fig = plt.figure(figsize=figsize)
     axs = fig.subplots(1, 2)
-    _figure_6_2_left(n_states, init_value, axs[0])
-    _figure_6_2_right(n_states, init_value, axs[1])
-
+    _figure_6_2_left(axs[0], n_states, init_value)
+    _figure_6_2_right(axs[1], n_states, init_value)
     fig.savefig("example_6_2.png", dpi=100)
 
 
