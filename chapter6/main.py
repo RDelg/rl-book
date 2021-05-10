@@ -46,11 +46,10 @@ def _parallel_evaluation(n_runs: int, *args):
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=multiprocessing.cpu_count() * 2
     ) as executor:
-        future_error = {executor.submit(_evaluate, *args): i for i in range(n_runs)}
+        future_error = [executor.submit(_evaluate, *args) for _ in range(n_runs)]
     for future in tqdm(
         concurrent.futures.as_completed(future_error), total=n_runs, disable=False
     ):
-        _ = future_error[future]
         run_errors.append(future.result())
 
     return run_errors
