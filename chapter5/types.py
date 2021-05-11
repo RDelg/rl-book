@@ -13,7 +13,7 @@ class Observation(NamedTuple):
 
 
 class Step(NamedTuple):
-    is_final: bool
+    done: bool
     state: State
     reward: float
     action: int
@@ -23,8 +23,8 @@ class Trajectory:
     def __init__(self):
         self.steps: List[Step] = []
 
-    def add_step(self, is_final: bool, state: State, reward: float, action: int):
-        self.steps.append(Step(is_final, state, reward, action))
+    def add_step(self, done: bool, state: State, reward: float, action: int):
+        self.steps.append(Step(done, state, reward, action))
 
     def __len__(self) -> int:
         return len(self.steps)

@@ -33,13 +33,19 @@ def _figure_6_2_left(ax: plt.Axes, n_states: int, init_value: float):
 
 
 def _evaluate_with_random_policy(
-    predictor: Predictor, real_value: np.ndarray, n_episodes: int, alpha: float
+    predictor: Predictor,
+    real_value: np.ndarray,
+    n_episodes: int,
+    alpha: float,
+    batch: bool = False,
 ) -> List[float]:
     loss = lambda prediction: np.sum((real_value - prediction) ** 2)
     policy = lambda _: int(np.random.uniform() < 0.5)
     error_history = [loss(predictor.V)]
     for _ in range(n_episodes):
-        predictor.predict(policy=policy, alpha=alpha, n_iters=1, disable_tqdm=True)
+        predictor.predict(
+            policy=policy, alpha=alpha, n_iters=1, disable_tqdm=True, batch=batch
+        )
         error_history.append(loss(predictor.V))
     return error_history
 
@@ -122,5 +128,39 @@ def example_6_2(figsize=(12, 6)):
     fig.savefig("example_6_2.png", dpi=100)
 
 
+def figure_6_2(figsize=(12, 6)):
+    n_states = 5
+    init_value = 0.5
+
+    env = RandomWalk(n_states)
+    td_predictor = TDPredictor(env)
+    mc_predictor = MonteCarloPredictor(env)
+
+    td_predictor.reset(init_value)
+    mc_predictor.reset(init_value)
+
+    real_value = np.arange(1, n_states + 1) / (n_states + 1)
+
+    td_batch_errors = _parallel_evaluation(
+        100, td_predictor, real_value, 100, 0.05, True
+    )
+
+    mc_batch_errors = _parallel_evaluation(
+        100, mc_predictor, real_value, 100, 0.15, True
+    )
+
+    fig = plt.figure(figsize=figsize)
+    ax = fig.subplots(1, 1)
+    ax.plot(td_batch_errors, color="b", label="TD")
+    ax.plot(mc_batch_errors, color="r", label="MC")
+    ax.legend(fontsize=12)
+    ax.set_title("Batch training", size=12)
+    ax.set_ylabel("RMS errors\naveraged over states", size=12)
+    ax.set_xlabel("Walks / Episodes", size=12)
+
+    fig.savefig("figure_6_2.png", dpi=100)
+
+
 if __name__ == "__main__":
     example_6_2()
+    figure_6_2()

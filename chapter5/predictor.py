@@ -1,9 +1,8 @@
 from abc import ABCMeta, abstractmethod
-from typing import Callable
-from typing import Optional
+from typing import Callable, Optional, List
 
 import numpy as np
-from tqdm import trange
+from tqdm import trange, tqdm
 
 from .env import Enviroment
 from .types import State, StateIndex, Trajectory
@@ -37,6 +36,7 @@ class MonteCarloPredictor(Predictor):
     def __init__(self, env: Enviroment, gamma: float = 1.0):
         super(MonteCarloPredictor, self).__init__(env, gamma)
         self.N = np.zeros_like(self.V, dtype=np.int32)
+        self.history: List[Trajectory] = []
 
     def generate_episode(
         self,
@@ -66,19 +66,30 @@ class MonteCarloPredictor(Predictor):
         n_iters: int = 1,
         init_state: Optional[State] = None,
         disable_tqdm: Optional[bool] = False,
+        batch: Optional[bool] = False,
     ):
         for _ in trange(n_iters, desc="Value prediction iter", disable=disable_tqdm):
+            if batch:
+                self._batch_update(alpha)
             trajectory = self.generate_episode(policy, init_state=init_state)
-            G = 0
-            previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
-            for i in range(len(trajectory) - 2, -1, -1):
-                G += self.gamma * trajectory[i + 1].reward
-                previous_states.pop()
-                s = trajectory[i].state
-                if s not in previous_states:
-                    s_idx = self.state_to_idx(s)
-                    self.N[s_idx] += 1
-                    self.V[s_idx] += alpha * (G - self.V[s_idx]) / self.N[s_idx]
+            self._update_V(trajectory, alpha)
+            self.history.append(trajectory)
+
+    def _batch_update(self, alpha: float, disable_tqdm: Optional[bool] = True):
+        for trajectory in tqdm(self.history, desc="Batch update", disable=disable_tqdm):
+            self._update_V(trajectory, alpha)
+
+    def _update_V(self, trajectory: Trajectory, alpha: float):
+        G = 0
+        previous_states = [x.state + (x.action,) for x in trajectory[0:-1]]
+        for i in range(len(trajectory) - 2, -1, -1):
+            G += self.gamma * trajectory[i + 1].reward
+            previous_states.pop()
+            s = trajectory[i].state
+            if s not in previous_states:
+                s_idx = self.state_to_idx(s)
+                self.N[s_idx] += 1
+                self.V[s_idx] += alpha * (G - self.V[s_idx]) / self.N[s_idx]
 
     def reset(self, init_value: float = 0.0):
         super(MonteCarloPredictor, self).reset()
