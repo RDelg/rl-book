@@ -25,6 +25,9 @@ class DiscreteDim:
     def to_list(self) -> List[str]:
         return list(range(self.minimum, self.minimum + self.n + 1))
 
+    def sample(self) -> int:
+        return np.random.randint(self.minimum, self.minimum + self.n)
+
 
 class DiscreteSpace:
     def __init__(self, *dims: DiscreteDim):
