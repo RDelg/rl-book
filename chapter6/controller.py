@@ -67,10 +67,10 @@ class SARSAController(DiscreteController):
         done: bool,
         reward: float,
     ) -> None:
-        c_s_idx = self.state_action_to_idx(current_state, action)
-        n_s_idx = self.state_action_to_idx(new_state, next_action)
-        next_q = 0 if done else self.Q[n_s_idx]
-        self.Q[c_s_idx] += alpha * (reward + self.gamma * next_q - self.Q[c_s_idx])
+        c_sa_idx = self.state_action_to_idx(current_state, action)
+        n_sa_idx = self.state_action_to_idx(new_state, next_action)
+        next_q = 0 if done else self.Q[n_sa_idx]
+        self.Q[c_sa_idx] += alpha * (reward + self.gamma * next_q - self.Q[c_sa_idx])
 
 
 def e_greedy_policy(epsilon: float) -> Callable[[DiscreteController, np.ndarray], int]:
