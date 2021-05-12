@@ -38,11 +38,11 @@ class SARSAController(DiscreteController):
             done = False
 
             current_state = self.env.state
-            action = policy(current_state, self.Q)
+            action = policy(self, current_state)
             while not done:
                 done, new_state, reward = self.env.step(action)
                 if not done:
-                    next_action = policy(new_state, self.Q)
+                    next_action = policy(self, new_state)
                 else:
                     next_action = None
                 self._update_Q(
@@ -73,7 +73,7 @@ class SARSAController(DiscreteController):
         self.Q[c_s_idx] += alpha * (reward + self.gamma * next_q - self.Q[c_s_idx])
 
 
-def e_greedy_policy(epsilon: float) -> Callable[[State, np.ndarray], int]:
+def e_greedy_policy(epsilon: float) -> Callable[[DiscreteController, np.ndarray], int]:
     def policy(controller: DiscreteController, state: State) -> int:
         if np.random.uniform() < epsilon:
             action = controller.env.act_space.sample()
