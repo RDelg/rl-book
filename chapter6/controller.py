@@ -79,7 +79,7 @@ def e_greedy_policy(epsilon: float) -> Callable[[DiscreteController, np.ndarray]
             action = controller.env.act_space.sample()
         else:
             state_idx = controller.state_to_idx(state)
-            action = int(controller.Q[state_idx].max())
+            action = int(controller.Q[state_idx].argmax(-1))
         return action
 
     return policy
