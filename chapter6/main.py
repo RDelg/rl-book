@@ -178,6 +178,6 @@ def example_6_5(figsize=(8, 6)):
 
 
 if __name__ == "__main__":
-    # example_6_2()
-    # figure_6_2()
+    example_6_2()
+    figure_6_2()
     example_6_5()
