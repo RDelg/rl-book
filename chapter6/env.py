@@ -56,14 +56,7 @@ class WindyGridWorld(Enviroment):
         self._ns += self.winds[self._nm] + self._map_action[action][0]
         self._ms += self._map_action[action][1]
         reward = -1
-        if (
-            0 > self._ns
-            or self._ns >= self.n
-            or 0 > self._ms
-            or self._ms >= self.m  # Out
-        ) or (
-            self._ns == self.reward_pos[0] and self._ms == self.reward_pos[1]  # Win
-        ):
-            done = True
-
+        out = 0 > self._ns or self._ns >= self.n or 0 > self._ms or self._ms >= self.m
+        win = self._ns == self.reward_pos[0] and self._ms == self.reward_pos[1]
+        done = out or win
         return Observation(done, self.state, reward)
