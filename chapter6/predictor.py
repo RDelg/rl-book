@@ -23,13 +23,13 @@ class TDPredictor(Predictor):
         self,
         policy: Callable[[np.ndarray], int],
         alpha: float = 0.01,
-        n_iters: int = 1,
+        n_episodes: int = 1,
         init_state: Optional[State] = None,
         disable_tqdm: Optional[bool] = False,
         batch: Optional[bool] = False,
     ):
         for _ in trange(
-            n_iters,
+            n_episodes,
             desc=f"Value prediction iter {'(batched)' if batch else ''}",
             disable=disable_tqdm,
         ):

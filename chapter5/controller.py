@@ -11,7 +11,7 @@ from .types import StateIndex, Trajectory, State, StateActionIndex
 class DiscreteController(metaclass=ABCMeta):
     def __init__(self, env: Enviroment):
         self.env = env
-        self._n_actions = self.env.act_space.n + 1
+        self._n_actions = self.env.act_space.n
 
     @abstractmethod
     def reset(self):
@@ -33,7 +33,7 @@ class MonteCarloController(DiscreteController):
 
     def reset(self):
         self.posible_actions = self.env.act_space.to_list()
-        shape = [dim.n for dim in self.env.obs_space] + [self._n_actions]
+        shape = [dim.n + 1 for dim in self.env.obs_space] + [self._n_actions]
         self.Q = np.zeros(shape=shape, dtype=np.float32)
         self.WG = np.zeros(shape=shape, dtype=np.float32)
         self.C = np.zeros_like(self.Q, dtype=np.float32)

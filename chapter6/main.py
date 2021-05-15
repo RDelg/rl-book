@@ -6,9 +6,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from chapter6.env import RandomWalk
-from chapter6.predictor import TDPredictor
 from chapter5.predictor import MonteCarloPredictor, Predictor
+from chapter6.env import RandomWalk, WindyGridWorld
+from chapter6.predictor import TDPredictor
+from chapter6.controller import SARSAController, e_greedy_policy
 
 
 def _figure_6_2_left(ax: plt.Axes, n_states: int, init_value: float):
@@ -20,7 +21,7 @@ def _figure_6_2_left(ax: plt.Axes, n_states: int, init_value: float):
     iters = [0] + [10 ** x for x in range(3)]
     for n in iters:
         predictor.reset(init_value)
-        predictor.predict(policy=policy, alpha=0.1, n_iters=n)
+        predictor.predict(policy=policy, alpha=0.1, n_episodes=n)
         values_history.append(predictor.V)
 
     for n, v in zip(iters, values_history):
@@ -44,7 +45,7 @@ def _evaluate_with_random_policy(
     error_history = [loss(predictor.V)]
     for _ in range(n_episodes):
         predictor.predict(
-            policy=policy, alpha=alpha, n_iters=1, disable_tqdm=True, batch=batch
+            policy=policy, alpha=alpha, n_episodes=1, disable_tqdm=True, batch=batch
         )
         error_history.append(loss(predictor.V))
     return error_history
@@ -161,6 +162,22 @@ def figure_6_2(figsize=(12, 6)):
     fig.savefig("figure_6_2.png", dpi=100)
 
 
+def example_6_5(figsize=(8, 6)):
+    env = WindyGridWorld(7, 10, winds=[0, 0, 0, 1, 1, 1, 1, 2, 2, 0], reward_pos=[3, 7])
+    policy = e_greedy_policy(0.1)
+    controller = SARSAController(env)
+
+    dones = controller.predict(policy, alpha=0.5, n_episodes=1_000, max_iters=8000)
+
+    fig = plt.figure(figsize=figsize)
+    ax = fig.subplots(1, 1)
+    ax.plot(dones, color="r")
+    ax.set_ylabel("Episodes", size=12)
+    ax.set_xlabel("Time steps", size=12)
+    fig.savefig("example_6_5.png", dpi=100)
+
+
 if __name__ == "__main__":
-    example_6_2()
-    figure_6_2()
+    # example_6_2()
+    # figure_6_2()
+    example_6_5()

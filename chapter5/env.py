@@ -9,6 +9,7 @@ from .types import Observation, State
 
 class DiscreteDim:
     def __init__(self, n: int, minimum: int = 0):
+        assert n > 1, "n must be greater than 1"
         self.n = n
         self.minimum = minimum
 
@@ -23,7 +24,7 @@ class DiscreteDim:
             return x - self.minimum <= self.n
 
     def to_list(self) -> List[str]:
-        return list(range(self.minimum, self.minimum + self.n + 1))
+        return list(range(self.minimum, self.minimum + self.n))
 
     def sample(self) -> int:
         return np.random.randint(self.minimum, self.minimum + self.n)
@@ -95,9 +96,9 @@ class BlackJack(Enviroment):
     ]
 
     def __init__(self):
-        self._act_space = DiscreteDim(1)
+        self._act_space = DiscreteDim(2)
         self._obs_space = DiscreteSpace(
-            DiscreteDim(9, minimum=12), DiscreteDim(1), DiscreteDim(9, minimum=1)
+            DiscreteDim(10, minimum=12), DiscreteDim(2), DiscreteDim(10, minimum=1)
         )
         self.reset()
 
@@ -178,8 +179,8 @@ class SingleState(Enviroment):
     _LEFT_ACTION = 0
 
     def __init__(self):
-        self._act_space = DiscreteDim(1, minimum=0)
-        self._obs_space = DiscreteSpace(DiscreteDim(1))
+        self._act_space = DiscreteDim(2, minimum=0)
+        self._obs_space = DiscreteSpace(DiscreteDim(2))
         self.reset()
 
     def reset(self):

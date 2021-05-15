@@ -63,12 +63,12 @@ class MonteCarloPredictor(Predictor):
         self,
         policy: Callable[[np.ndarray], int],
         alpha: float = 0.01,
-        n_iters: int = 1,
+        n_episodes: int = 1,
         init_state: Optional[State] = None,
         disable_tqdm: Optional[bool] = False,
         batch: Optional[bool] = False,
     ):
-        for _ in trange(n_iters, desc="Value prediction iter", disable=disable_tqdm):
+        for _ in trange(n_episodes, desc="Value prediction iter", disable=disable_tqdm):
             if batch:
                 self._batch_update(alpha)
             trajectory = self.generate_episode(policy, init_state=init_state)

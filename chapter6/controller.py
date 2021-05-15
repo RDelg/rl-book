@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 from tqdm import trange
 
@@ -9,8 +9,9 @@ from chapter5.controller import DiscreteController
 
 
 class SARSAController(DiscreteController):
-    def __init__(self, env: Enviroment):
-        super(DiscreteController, self).__init__(env)
+    def __init__(self, env: Enviroment, gamma: float = 1.0):
+        super(SARSAController, self).__init__(env)
+        self.gamma = gamma
         self.reset()
 
     def reset(self):
@@ -20,14 +21,18 @@ class SARSAController(DiscreteController):
 
     def predict(
         self,
-        policy: Callable[[np.ndarray], int],
+        policy: Callable[[DiscreteController, np.ndarray], int],
         alpha: float = 0.01,
-        n_iters: int = 1,
+        n_episodes: int = 1,
         init_state: Optional[State] = None,
         disable_tqdm: Optional[bool] = False,
+        max_iters: Optional[int] = None,
     ):
+        done_history = []
+        dones = 0
+        total_iters = 0
         for _ in trange(
-            n_iters,
+            n_episodes,
             desc=f"Value prediction iter",
             disable=disable_tqdm,
         ):
@@ -39,8 +44,11 @@ class SARSAController(DiscreteController):
 
             current_state = self.env.state
             action = policy(self, current_state)
-            while not done:
+            while not done and (max_iters is None or total_iters < max_iters):
                 done, new_state, reward = self.env.step(action)
+                dones += int(done)
+                total_iters += 1
+                done_history.append(dones)
                 if not done:
                     next_action = policy(self, new_state)
                 else:
@@ -56,6 +64,7 @@ class SARSAController(DiscreteController):
                 )
                 current_state = new_state
                 action = next_action
+        return done_history
 
     def _update_Q(
         self,
