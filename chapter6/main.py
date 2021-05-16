@@ -1,4 +1,5 @@
-from typing import Callable, List, Optional
+from logging import disable
+from typing import Callable, List, Optional, Type
 import multiprocessing
 import concurrent.futures
 from functools import partial
@@ -8,9 +9,14 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from chapter5.predictor import MonteCarloPredictor, Predictor
-from chapter6.env import RandomWalk, WindyGridWorld
+from chapter6.env import CliffGridWorld, RandomWalk, WindyGridWorld
 from chapter6.predictor import TDPredictor
-from chapter6.controller import SARSAController, EpsilonGreedyPolicy, GreedyPolicy
+from chapter6.controller import (
+    Policy,
+    SARSAController,
+    EpsilonGreedyPolicy,
+    GreedyPolicy,
+)
 
 
 def _figure_6_2_left(ax: plt.Axes, n_states: int, init_value: float):
@@ -247,7 +253,61 @@ def example_6_5(figsize=(8, 6), add_q_learning_plot: Optional[bool] = False):
     fig.savefig("example_6_5.png", dpi=100)
 
 
+def _predict(
+    controller: Predictor,
+    policy: Type[Policy],
+    target_policy: Type[Policy],
+    n_episodes: int,
+    alpha: float,
+) -> List[float]:
+    controller.reset()
+    target_policy = target_policy or policy
+    history = controller.predict(
+        policy(controller),
+        target_policy=target_policy(controller),
+        alpha=alpha,
+        n_episodes=n_episodes,
+        disable_tqdm=True,
+    )
+
+    return history["sum_reward"]
+
+
+def example_6_6(figsize=(8, 6)):
+    env = CliffGridWorld(4, 12)
+    controller = SARSAController(env)
+    policy = partial(EpsilonGreedyPolicy, epsilon=0.1)
+    target_policy = GreedyPolicy
+
+    sarsa_sum_rewards = _parallel_evaluation(
+        _predict, 100, controller, policy, None, 1000, 0.5
+    )
+    q_learning_sum_rewards = _parallel_evaluation(
+        _predict, 100, controller, policy, target_policy, 1000, 0.5
+    )
+
+    # Plot
+    fig = plt.figure(figsize=figsize)
+    ax = fig.subplots(1, 1)
+    ax.plot(
+        sarsa_sum_rewards,
+        color="r",
+        label="sarsa",
+    )
+    ax.plot(
+        q_learning_sum_rewards,
+        color="b",
+        label="q-learning",
+    )
+    ax.legend()
+    ax.set_ylim(-100, 1)
+    ax.set_ylabel("Sum of rewards during episodes", size=12)
+    ax.set_xlabel("Episodes", size=12)
+    fig.savefig("example_6_6.png", dpi=100)
+
+
 if __name__ == "__main__":
     example_6_2()
     figure_6_2()
     example_6_5()
+    example_6_6()

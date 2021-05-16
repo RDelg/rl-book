@@ -64,3 +64,39 @@ class WindyGridWorld(Enviroment):
 
         done = self._ns == self.reward_pos[0] and self._ms == self.reward_pos[1]
         return Observation(done, self.state, reward)
+
+
+class CliffGridWorld(Enviroment):
+
+    _map_action: List[Tuple[int, int]] = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+
+    def __init__(self, n: int, m: int):
+        assert m > 2, f"m ({2}) must be greater than 2"
+        self.n = n
+        self.m = m
+        self._act_space = DiscreteDim(4, minimum=0)
+        self._obs_space = DiscreteSpace(DiscreteDim(self.n), DiscreteDim(self.m))
+        self.reset()
+
+    def reset(self):
+        self._ns = 0
+        self._ms = 0
+
+    @property
+    def state(self) -> State:
+        return (self._ns, self._ms)
+
+    def step(self, action: int) -> Observation:
+        assert self.act_space.contains(action), f"Invalid action {action}"
+        clip = lambda x, maximum: 0 if x < 0 else maximum - 1 if x >= maximum else x
+        self._ns += self._map_action[action][0]
+        self._ms += self._map_action[action][1]
+        self._ns = clip(self._ns, self.n)
+        self._ms = clip(self._ms, self.m)
+        reward = -1
+        cliff = 0 < self._ms < self.m - 1 and self._ns == 0
+        if cliff:
+            self._ns, self._ms = 0, 0
+            reward = -100
+        done = self._ns == 0 and self._ms == (self.m - 1)
+        return Observation(done, self.state, reward)

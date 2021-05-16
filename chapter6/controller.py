@@ -53,7 +53,7 @@ class SARSAController(DiscreteController):
     ):
         target_policy = target_policy or policy
 
-        history = {"dones_iter": []}
+        history = {"dones_iter": [], "sum_reward": []}
         total_iters = 0
 
         for _ in trange(
@@ -72,12 +72,15 @@ class SARSAController(DiscreteController):
             action, _ = policy(current_state)
 
             trajectory = Trajectory()
+            sum_reward = 0
             while not done and (max_iters is None or total_iters < max_iters):
                 trajectory.add_step(done, current_state, reward, action)
                 done, new_state, reward = self.env.step(action)
+                sum_reward += reward
                 total_iters += 1
                 if done:
                     history["dones_iter"].append(total_iters)
+                    history["sum_reward"].append(sum_reward)
                     next_action = None
                 else:
                     next_action, _ = target_policy(new_state)
