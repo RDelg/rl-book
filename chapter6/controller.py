@@ -1,6 +1,6 @@
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod
 import numpy as np
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from tqdm import trange
 
@@ -44,12 +44,14 @@ class SARSAController(DiscreteController):
     def predict(
         self,
         policy: Policy,
+        target_policy: Optional[Policy] = None,
         alpha: float = 0.01,
         n_episodes: int = 1,
         init_state: Optional[State] = None,
         disable_tqdm: Optional[bool] = False,
         max_iters: Optional[int] = None,
     ):
+        target_policy = target_policy or policy
 
         history = {"dones_iter": []}
         total_iters = 0
@@ -78,7 +80,7 @@ class SARSAController(DiscreteController):
                     history["dones_iter"].append(total_iters)
                     next_action = None
                 else:
-                    next_action, _ = policy(new_state)
+                    next_action, _ = target_policy(new_state)
                     self._update_Q(
                         alpha,
                         current_state,
@@ -116,15 +118,14 @@ class EpsilonGreedyPolicy(Policy):
     ):
         self.controller = controller
         self.epsilon = epsilon
-        self.update(freeze)
+        self.freeze = freeze
+        self.update()
 
-    def update(self, freeze: bool):
-        if freeze:
+    def update(self):
+        if self.freeze:
             self.Q = np.copy(self.controller.Q)
-            self._ft = True
         else:
             self.Q = self.controller.Q
-            self._ft = False
 
     def greedy_action(self, state: State) -> int:
         state_idx = self.controller.state_to_idx(state)
@@ -155,3 +156,26 @@ class EpsilonGreedyPolicy(Policy):
             prob += 1.0 - self.epsilon
 
         return action, prob
+
+
+class GreedyPolicy(Policy):
+    def __init__(self, controller: DiscreteController, freeze: bool = False):
+        self.controller = controller
+        self.freeze = freeze
+        self.update()
+
+    def update(self):
+        if self.freeze:
+            self.Q = np.copy(self.controller.Q)
+        else:
+            self.Q = self.controller.Q
+
+    def greedy_action(self, state: State) -> int:
+        state_idx = self.controller.state_to_idx(state)
+        return int(self.Q[state_idx].argmax(-1))
+
+    def prob(self, state: State, action: int) -> float:
+        return float(action == self.greedy_action(state))
+
+    def __call__(self, state: State) -> Tuple[int, float]:
+        return self.greedy_action(state), 1.0

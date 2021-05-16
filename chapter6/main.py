@@ -10,7 +10,7 @@ from tqdm import tqdm
 from chapter5.predictor import MonteCarloPredictor, Predictor
 from chapter6.env import RandomWalk, WindyGridWorld
 from chapter6.predictor import TDPredictor
-from chapter6.controller import SARSAController, EpsilonGreedyPolicy
+from chapter6.controller import SARSAController, EpsilonGreedyPolicy, GreedyPolicy
 
 
 def _figure_6_2_left(ax: plt.Axes, n_states: int, init_value: float):
@@ -199,21 +199,48 @@ def figure_6_2(figsize=(12, 6)):
     fig.savefig("figure_6_2.png", dpi=100)
 
 
-def example_6_5(figsize=(8, 6)):
+def example_6_5(figsize=(8, 6), add_q_learning_plot: Optional[bool] = False):
     env = WindyGridWorld(7, 10, winds=[0, 0, 0, 1, 1, 1, 1, 2, 2, 0], reward_pos=[3, 7])
     controller = SARSAController(env)
     policy = EpsilonGreedyPolicy(controller, 0.1)
-    history = controller.predict(
+
+    history_s = controller.predict(
         policy,
         alpha=0.5,
         n_episodes=8_000,
         max_iters=8_000,
     )
+
+    controller.reset()
+
     fig = plt.figure(figsize=figsize)
     ax = fig.subplots(1, 1)
+
     ax.plot(
-        history["dones_iter"], list(range(1, len(history["dones_iter"]) + 1)), color="r"
+        history_s["dones_iter"],
+        list(range(1, len(history_s["dones_iter"]) + 1)),
+        color="r",
+        label="sarsa",
     )
+
+    if add_q_learning_plot:
+        target_policy = GreedyPolicy(controller)
+
+        history_q = controller.predict(
+            policy,
+            target_policy=target_policy,
+            alpha=0.5,
+            n_episodes=8_000,
+            max_iters=8_000,
+        )
+
+        ax.plot(
+            history_q["dones_iter"],
+            list(range(1, len(history_q["dones_iter"]) + 1)),
+            color="b",
+            label="q-learning",
+        )
+        ax.legend()
 
     ax.set_ylabel("Episodes", size=12)
     ax.set_xlabel("Time steps", size=12)
