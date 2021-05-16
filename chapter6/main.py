@@ -1,6 +1,7 @@
-from typing import List
+from typing import Callable, List, Optional
 import multiprocessing
 import concurrent.futures
+from functools import partial
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -51,14 +52,12 @@ def _evaluate_with_random_policy(
     return error_history
 
 
-def _parallel_evaluation(n_runs: int, *args) -> np.ndarray:
+def _parallel_evaluation(func: Callable, n_runs: int, *args, **kwargs) -> np.ndarray:
     run_errors = []
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=multiprocessing.cpu_count() * 2
     ) as executor:
-        future_error = [
-            executor.submit(_evaluate_with_random_policy, *args) for _ in range(n_runs)
-        ]
+        future_error = [executor.submit(func, *args, **kwargs) for _ in range(n_runs)]
     for future in tqdm(
         concurrent.futures.as_completed(future_error), total=n_runs, disable=False
     ):
@@ -67,7 +66,12 @@ def _parallel_evaluation(n_runs: int, *args) -> np.ndarray:
     return np.array(run_errors).mean(0)
 
 
-def _figure_6_2_right(ax: plt.Axes, n_states: int, init_value: float):
+def _figure_6_2_right(
+    ax: plt.Axes,
+    n_states: int,
+    init_value: float,
+    plot_batch_versions: Optional[bool] = False,
+):
     real_value = np.arange(1, n_states + 1) / (n_states + 1)
 
     env = RandomWalk(n_states)
@@ -81,19 +85,26 @@ def _figure_6_2_right(ax: plt.Axes, n_states: int, init_value: float):
     n_runs = 100
     # TD
     td_alphas = [0.05, 0.1, 0.15]
-    td_avg_error = []
-    for a in tqdm(td_alphas, desc="TD runs"):
-        td_avg_error.append(
-            _parallel_evaluation(n_runs, td_predictor, real_value, n_episodes, a)
-        )
+    parallel_eval = partial(
+        _parallel_evaluation,
+        _evaluate_with_random_policy,
+        n_runs=n_runs,
+        real_value=real_value,
+        n_episodes=n_episodes,
+    )
+
+    # TD
+    td_avg_error = [
+        parallel_eval(predictor=td_predictor, alpha=a)
+        for a in tqdm(td_alphas, desc="TD runs")
+    ]
 
     # MC
     mc_alphas = [0.05, 0.1, 0.15]
-    mc_avg_error = []
-    for a in tqdm(mc_alphas, desc="MC runs"):
-        mc_avg_error.append(
-            _parallel_evaluation(n_runs, mc_predictor, real_value, n_episodes, a)
-        )
+    mc_avg_error = [
+        parallel_eval(predictor=mc_predictor, alpha=a)
+        for a in tqdm(td_alphas, desc="MC runs")
+    ]
 
     # Plot
     linestyles = ["--", "-.", ":"]
@@ -112,6 +123,32 @@ def _figure_6_2_right(ax: plt.Axes, n_states: int, init_value: float):
             color="r",
             linestyle=style,
         )
+
+    if plot_batch_versions:
+        # TD Batch
+        td_batch_avg_error = [
+            parallel_eval(predictor=td_predictor, alpha=a, batch=True)
+            for a in tqdm(td_alphas, desc="TD batch runs")
+        ]
+        # MC batch
+        mc_batch_avg_error = [
+            parallel_eval(predictor=mc_predictor, alpha=a, batch=True)
+            for a in tqdm(td_alphas, desc="MC batch runs")
+        ]
+        for alpha, avg_error, style in zip(td_alphas, td_batch_avg_error, linestyles):
+            ax.plot(
+                avg_error,
+                label=f"td alpha {alpha}",
+                color="c",
+                linestyle=style,
+            )
+        for alpha, avg_error, style in zip(mc_alphas, mc_batch_avg_error, linestyles):
+            ax.plot(
+                avg_error,
+                label=f"mc alpha {alpha}",
+                color="g",
+                linestyle=style,
+            )
 
     ax.legend(fontsize=12)
     ax.set_title("Empirical RMS errors\naveraged over states", size=20)
@@ -143,11 +180,11 @@ def figure_6_2(figsize=(12, 6)):
     real_value = np.arange(1, n_states + 1) / (n_states + 1)
 
     td_batch_errors = _parallel_evaluation(
-        100, td_predictor, real_value, 100, 0.05, True
+        _evaluate_with_random_policy, 100, td_predictor, real_value, 100, 0.05, True
     )
 
     mc_batch_errors = _parallel_evaluation(
-        100, mc_predictor, real_value, 100, 0.15, True
+        _evaluate_with_random_policy, 100, mc_predictor, real_value, 100, 0.15, True
     )
 
     fig = plt.figure(figsize=figsize)
