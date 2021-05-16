@@ -53,7 +53,7 @@ class WindyGridWorld(Enviroment):
         return (self._ns, self._ms)
 
     def step(self, action: int) -> Observation:
-        assert self.act_space.contains(action), "Invalid action"
+        assert self.act_space.contains(action), f"Invalid action {action}"
         clip = lambda x, maximum: 0 if x < 0 else maximum - 1 if x >= maximum else x
 
         self._ns += self.winds[self._ms] + self._map_action[action][0]

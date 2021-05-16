@@ -40,10 +40,12 @@ class TDPredictor(Predictor):
             else:
                 self.env.state = init_state
             done = False
+            reward = 0
             trajectory = Trajectory()
             while not done:
                 current_state = self.env.state
                 action = policy(current_state)
+                trajectory.add_step(done, current_state, reward, action)
                 done, new_state, reward = self.env.step(action)
                 self._update_V(
                     alpha,
@@ -53,7 +55,6 @@ class TDPredictor(Predictor):
                     reward,
                 )
                 current_state = new_state
-                trajectory.add_step(done, current_state, reward, action)
             trajectory.add_step(done, current_state, reward, None)
             self.history.append(trajectory)
 

@@ -9,7 +9,7 @@ from tqdm import tqdm
 from chapter5.predictor import MonteCarloPredictor, Predictor
 from chapter6.env import RandomWalk, WindyGridWorld
 from chapter6.predictor import TDPredictor
-from chapter6.controller import SARSAController, e_greedy_policy
+from chapter6.controller import SARSAController, EpsilonGreedyPolicy
 
 
 def _figure_6_2_left(ax: plt.Axes, n_states: int, init_value: float):
@@ -164,14 +164,20 @@ def figure_6_2(figsize=(12, 6)):
 
 def example_6_5(figsize=(8, 6)):
     env = WindyGridWorld(7, 10, winds=[0, 0, 0, 1, 1, 1, 1, 2, 2, 0], reward_pos=[3, 7])
-    policy = e_greedy_policy(0.1)
     controller = SARSAController(env)
-
-    dones = controller.predict(policy, alpha=0.5, n_episodes=1_000, max_iters=8000)
-
+    policy = EpsilonGreedyPolicy(controller, 0.1)
+    history = controller.predict(
+        policy,
+        alpha=0.5,
+        n_episodes=8_000,
+        max_iters=8_000,
+    )
     fig = plt.figure(figsize=figsize)
     ax = fig.subplots(1, 1)
-    ax.plot(dones, color="r")
+    ax.plot(
+        history["dones_iter"], list(range(1, len(history["dones_iter"]) + 1)), color="r"
+    )
+
     ax.set_ylabel("Episodes", size=12)
     ax.set_xlabel("Time steps", size=12)
     fig.savefig("example_6_5.png", dpi=100)

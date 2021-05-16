@@ -33,6 +33,4 @@ class Trajectory:
         return self.steps[index]
 
     def __repr__(self) -> str:
-        return "\n".join(
-            [f"t={i}: {step.__dict__}" for i, step in enumerate(self.steps)]
-        )
+        return "\n".join([f"t={i}\t{step}" for i, step in enumerate(self.steps)])
