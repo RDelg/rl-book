@@ -280,10 +280,10 @@ def example_6_6(figsize=(8, 6)):
     target_policy = GreedyPolicy
 
     sarsa_sum_rewards = _parallel_evaluation(
-        _predict, 100, controller, policy, None, 1000, 0.5
+        _predict, 100, controller, policy, None, 500, 0.5
     )
     q_learning_sum_rewards = _parallel_evaluation(
-        _predict, 100, controller, policy, target_policy, 1000, 0.5
+        _predict, 100, controller, policy, target_policy, 500, 0.5
     )
 
     # Plot

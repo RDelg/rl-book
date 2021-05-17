@@ -69,11 +69,11 @@ class SARSAController(DiscreteController):
             reward = 0
 
             current_state = self.env.state
-            action, _ = policy(current_state)
 
             trajectory = Trajectory()
             sum_reward = 0
             while not done and (max_iters is None or total_iters < max_iters):
+                action, _ = policy(current_state)
                 trajectory.add_step(done, current_state, reward, action)
                 done, new_state, reward = self.env.step(action)
                 sum_reward += reward
@@ -94,7 +94,6 @@ class SARSAController(DiscreteController):
                         reward,
                     )
                 current_state = new_state
-                action = next_action
             trajectory.add_step(done, current_state, reward, None)
 
         return history
