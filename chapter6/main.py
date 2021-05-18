@@ -228,7 +228,7 @@ def example_6_5(figsize=(8, 6), plot_q_learning: Optional[bool] = False):
         label="sarsa",
     )
 
-    if add_q_learning_plot:
+    if plot_q_learning:
         target_policy = GreedyPolicy(controller)
 
         history_q = controller.predict(
