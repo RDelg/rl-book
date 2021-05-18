@@ -5,7 +5,7 @@ from typing import Any, Optional, Tuple
 from tqdm import trange
 
 from chapter5.env import Enviroment
-from chapter5.types import State, Trajectory
+from chapter5.types import State, StateIndex, Trajectory
 from chapter5.controller import DiscreteController
 
 
@@ -15,6 +15,10 @@ class Policy(metaclass=ABCMeta):
 
     @abstractmethod
     def update(self, *args: Any, **kwds: Any):
+        pass
+
+    @abstractmethod
+    def V(self, *args: Any, **kwds: Any) -> float:
         pass
 
     @abstractmethod
@@ -50,6 +54,7 @@ class SARSAController(DiscreteController):
         init_state: Optional[State] = None,
         disable_tqdm: Optional[bool] = False,
         max_iters: Optional[int] = None,
+        expected: Optional[bool] = False,
     ):
         target_policy = target_policy or policy
 
@@ -78,40 +83,27 @@ class SARSAController(DiscreteController):
                 done, new_state, reward = self.env.step(action)
                 sum_reward += reward
                 total_iters += 1
+                c_sa_idx = self.state_action_to_idx(current_state, action)
                 if done:
                     history["dones_iter"].append(total_iters)
                     history["sum_reward"].append(sum_reward)
                     next_action = None
+                    next_q = 0
+                elif expected:
+                    next_q = policy.V(new_state)
                 else:
                     next_action, _ = target_policy(new_state)
-                    self._update_Q(
-                        alpha,
-                        current_state,
-                        action,
-                        new_state,
-                        next_action,
-                        done,
-                        reward,
-                    )
+                    n_sa_idx = self.state_action_to_idx(new_state, next_action)
+                    next_q = self.Q[n_sa_idx]
+
+                self.Q[c_sa_idx] += alpha * (
+                    (reward + self.gamma * next_q) - self.Q[c_sa_idx]
+                )
+
                 current_state = new_state
             trajectory.add_step(done, current_state, reward, None)
 
         return history
-
-    def _update_Q(
-        self,
-        alpha: float,
-        current_state: State,
-        action: int,
-        new_state: State,
-        next_action: int,
-        done: bool,
-        reward: float,
-    ) -> None:
-        c_sa_idx = self.state_action_to_idx(current_state, action)
-        n_sa_idx = self.state_action_to_idx(new_state, next_action)
-        next_q = 0 if done else self.Q[n_sa_idx]
-        self.Q[c_sa_idx] += alpha * ((reward + self.gamma * next_q) - self.Q[c_sa_idx])
 
 
 class EpsilonGreedyPolicy(Policy):
@@ -121,6 +113,7 @@ class EpsilonGreedyPolicy(Policy):
         self.controller = controller
         self.epsilon = epsilon
         self.freeze = freeze
+        self._base_prob = self.epsilon * 1.0 / self.controller.env.act_space.n
         self.update()
 
     def update(self):
@@ -131,15 +124,23 @@ class EpsilonGreedyPolicy(Policy):
 
     def greedy_action(self, state: State) -> int:
         state_idx = self.controller.state_to_idx(state)
-        return int(self.Q[state_idx].argmax(-1))
+        return self._get_greedy_action(state=state_idx)
+
+    def _get_greedy_action(self, state: StateIndex) -> int:
+        return int(self.Q[state].argmax(-1))
+
+    def V(self, state: State) -> float:
+        state_idx = self.controller.state_to_idx(state)
+        greedy = self._get_greedy_action(state_idx)
+        probs = np.ones(self.controller.env.act_space.n) * self._base_prob
+        probs[greedy] += 1.0 - self.epsilon
+        return (self.Q[state_idx] * probs).sum(-1)
 
     def prob(self, state: State, action: int) -> float:
 
         greedy_action = self.greedy_action(state)
-        prob = self.epsilon * 1.0 / self.controller.env.act_space.n
 
-        prob = self.epsilon * 1.0 / self.controller.env.act_space.n
-
+        prob = self._base_prob
         if action == greedy_action:
             prob += 1.0 - self.epsilon
 
@@ -147,8 +148,7 @@ class EpsilonGreedyPolicy(Policy):
 
     def __call__(self, state: State) -> Tuple[int, float]:
         greedy_action = self.greedy_action(state)
-
-        prob = self.epsilon * 1.0 / self.controller.env.act_space.n
+        prob = self._base_prob
         if np.random.uniform() < self.epsilon:
             action = self.controller.env.act_space.sample()
         else:
@@ -156,6 +156,7 @@ class EpsilonGreedyPolicy(Policy):
 
         if action == greedy_action:
             prob += 1.0 - self.epsilon
+            action = greedy_action
 
         return action, prob
 
@@ -175,6 +176,12 @@ class GreedyPolicy(Policy):
     def greedy_action(self, state: State) -> int:
         state_idx = self.controller.state_to_idx(state)
         return int(self.Q[state_idx].argmax(-1))
+
+    def V(self, state: State) -> float:
+        state_idx = self.controller.state_action_to_idx(
+            state, self.greedy_action(state)
+        )
+        return self.Q[state_idx]
 
     def prob(self, state: State, action: int) -> float:
         return float(action == self.greedy_action(state))

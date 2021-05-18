@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional, Type
+from typing import Any, Callable, List, Optional, Type
 import multiprocessing
 import concurrent.futures
 from functools import partial
@@ -204,7 +204,7 @@ def figure_6_2(figsize=(12, 6)):
     fig.savefig("figure_6_2.png", dpi=100)
 
 
-def example_6_5(figsize=(8, 6), add_q_learning_plot: Optional[bool] = False):
+def example_6_5(figsize=(8, 6), plot_q_learning: Optional[bool] = False):
     env = WindyGridWorld(7, 10, winds=[0, 0, 0, 1, 1, 1, 1, 2, 2, 0], reward_pos=[3, 7])
     controller = SARSAController(env)
     policy = EpsilonGreedyPolicy(controller, 0.1)
@@ -258,6 +258,8 @@ def _predict(
     target_policy: Type[Policy],
     n_episodes: int,
     alpha: float,
+    *args: Any,
+    **kwds: Any,
 ) -> List[float]:
     controller.reset()
     target_policy = target_policy or policy
@@ -267,12 +269,14 @@ def _predict(
         alpha=alpha,
         n_episodes=n_episodes,
         disable_tqdm=True,
+        *args,
+        **kwds,
     )
 
     return history["sum_reward"]
 
 
-def example_6_6(figsize=(8, 6)):
+def example_6_6(figsize=(8, 6), plot_expected_sarsa: Optional[bool] = False):
     env = CliffGridWorld(4, 12)
     controller = SARSAController(env)
     policy = partial(EpsilonGreedyPolicy, epsilon=0.1)
@@ -281,6 +285,7 @@ def example_6_6(figsize=(8, 6)):
     sarsa_sum_rewards = _parallel_evaluation(
         _predict, 100, controller, policy, None, 500, 0.5
     )
+
     q_learning_sum_rewards = _parallel_evaluation(
         _predict, 100, controller, policy, target_policy, 500, 0.5
     )
@@ -298,6 +303,15 @@ def example_6_6(figsize=(8, 6)):
         color="b",
         label="q-learning",
     )
+    if plot_expected_sarsa:
+        sarsa_expected_sum_rewards = _parallel_evaluation(
+            _predict, 100, controller, policy, None, 500, 0.5, expected=True
+        )
+        ax.plot(
+            sarsa_expected_sum_rewards,
+            color="g",
+            label="expected-sarsa",
+        )
     ax.legend()
     ax.set_ylim(-100, 1)
     ax.set_ylabel("Sum of rewards during episodes", size=12)
@@ -305,8 +319,13 @@ def example_6_6(figsize=(8, 6)):
     fig.savefig("example_6_6.png", dpi=100)
 
 
+def figure_6_3(figsize=(8, 6)):
+    pass
+
+
 if __name__ == "__main__":
     example_6_2()
     figure_6_2()
     example_6_5()
     example_6_6()
+    figure_6_3()
