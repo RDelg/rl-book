@@ -320,12 +320,154 @@ def example_6_6(figsize=(8, 6), plot_expected_sarsa: Optional[bool] = False):
 
 
 def figure_6_3(figsize=(8, 6)):
-    pass
+    env = CliffGridWorld(4, 12)
+    controller = SARSAController(env)
+    policy = partial(EpsilonGreedyPolicy, epsilon=0.1)
+    target_policy = GreedyPolicy
+
+    interim_runs = 100
+    interim_episodes = 100
+
+    asymtotic_runs = 10
+    asymtotic_episodes = 100_000
+
+    alphas = np.arange(0.1, 1.05, 0.05)
+
+    print("Interim")
+
+    sarsa_interim = [
+        _parallel_evaluation(
+            _predict, interim_runs, controller, policy, None, interim_episodes, alpha
+        ).mean(-1)
+        for alpha in alphas
+    ]
+
+    q_learning_interim = [
+        _parallel_evaluation(
+            _predict,
+            interim_runs,
+            controller,
+            policy,
+            target_policy,
+            interim_episodes,
+            alpha,
+        ).mean(-1)
+        for alpha in alphas
+    ]
+
+    expected_sarsa_interim = [
+        _parallel_evaluation(
+            _predict,
+            interim_runs,
+            controller,
+            policy,
+            None,
+            interim_episodes,
+            alpha,
+            expected=True,
+        ).mean(-1)
+        for alpha in alphas
+    ]
+
+    print("Asymtotic")
+
+    sarsa_asymtotic = [
+        _parallel_evaluation(
+            _predict,
+            asymtotic_runs,
+            controller,
+            policy,
+            None,
+            asymtotic_episodes,
+            alpha,
+        ).mean(-1)
+        for alpha in alphas
+    ]
+
+    q_learning_asymtotic = [
+        _parallel_evaluation(
+            _predict,
+            asymtotic_runs,
+            controller,
+            policy,
+            target_policy,
+            asymtotic_episodes,
+            alpha,
+        ).mean(-1)
+        for alpha in alphas
+    ]
+
+    expected_sarsa_asymtotic = [
+        _parallel_evaluation(
+            _predict,
+            asymtotic_runs,
+            controller,
+            policy,
+            None,
+            asymtotic_episodes,
+            alpha,
+            expected=True,
+        ).mean(-1)
+        for alpha in alphas
+    ]
+
+    # Plot
+    fig = plt.figure(figsize=figsize)
+    ax = fig.subplots(1, 1)
+    ax.plot(
+        alphas,
+        sarsa_interim,
+        color="b",
+        marker="^",
+        label="sarsa",
+    )
+    ax.plot(
+        alphas,
+        q_learning_interim,
+        color="k",
+        marker="s",
+        label="q-learning",
+    )
+    ax.plot(
+        alphas,
+        expected_sarsa_interim,
+        marker="x",
+        color="r",
+        label="expected sarsa",
+    )
+
+    ax.plot(
+        alphas,
+        sarsa_asymtotic,
+        color="b",
+        marker="^",
+        label="sarsa",
+    )
+    ax.plot(
+        alphas,
+        q_learning_asymtotic,
+        color="k",
+        marker="s",
+        label="q-learning",
+    )
+    ax.plot(
+        alphas,
+        expected_sarsa_asymtotic,
+        marker="x",
+        color="r",
+        label="expected sarsa",
+    )
+    ax.legend()
+    ax.set_ylim(-140, 1)
+    ax.set_xlim(0.1, 1)
+    ax.set_ylabel("Sum of rewards per episodes", size=12)
+    ax.set_xlabel("alpha", size=12)
+    fig.savefig("figure_6_3.png", dpi=100)
 
 
 if __name__ == "__main__":
-    example_6_2()
-    figure_6_2()
-    example_6_5()
-    example_6_6()
+    # example_6_2()
+    # figure_6_2()
+    # example_6_5()
+    # example_6_6()
     figure_6_3()
