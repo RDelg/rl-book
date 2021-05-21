@@ -63,7 +63,7 @@ class SARSAController(DiscreteController):
 
         for _ in trange(
             n_episodes,
-            desc=f"Value prediction iter",
+            desc="Value prediction iter",
             disable=disable_tqdm,
         ):
             if init_state is None:
@@ -72,14 +72,10 @@ class SARSAController(DiscreteController):
                 self.env.state = init_state
             done = False
             reward = 0
-
             current_state = self.env.state
-
-            trajectory = Trajectory()
             sum_reward = 0
             while not done and (max_iters is None or total_iters < max_iters):
                 action, _ = policy(current_state)
-                trajectory.add_step(done, current_state, reward, action)
                 done, new_state, reward = self.env.step(action)
                 sum_reward += reward
                 total_iters += 1
@@ -95,13 +91,10 @@ class SARSAController(DiscreteController):
                     next_action, _ = target_policy(new_state)
                     n_sa_idx = self.state_action_to_idx(new_state, next_action)
                     next_q = self.Q[n_sa_idx]
-
                 self.Q[c_sa_idx] += alpha * (
                     (reward + self.gamma * next_q) - self.Q[c_sa_idx]
                 )
-
                 current_state = new_state
-            trajectory.add_step(done, current_state, reward, None)
 
         return history
 
@@ -137,13 +130,10 @@ class EpsilonGreedyPolicy(Policy):
         return (self.Q[state_idx] * probs).sum(-1)
 
     def prob(self, state: State, action: int) -> float:
-
         greedy_action = self.greedy_action(state)
-
         prob = self._base_prob
         if action == greedy_action:
             prob += 1.0 - self.epsilon
-
         return prob
 
     def __call__(self, state: State) -> Tuple[int, float]:
