@@ -110,7 +110,7 @@ class EpsilonGreedyPolicy(Policy):
         else:
             self.Q = self.controller.Q
 
-    def _get_masket_Q(
+    def _get_masked_Q(
         self, state_idx: StateIndex, legal_actions: Union[List[int], None]
     ) -> np.ndarray:
         Q = self.Q[state_idx]
@@ -123,7 +123,7 @@ class EpsilonGreedyPolicy(Policy):
     def V(self, state: State) -> float:
         state_idx = self.controller.state_to_idx(state)
         legal_actions = self.controller.env.legal_actions(state)
-        Q = self._get_masket_Q(state_idx, legal_actions)
+        Q = self._get_masked_Q(state_idx, legal_actions)
 
         if legal_actions is not None:
             base_prob = self.epsilon * 1.0 / len(legal_actions)
@@ -146,7 +146,7 @@ class EpsilonGreedyPolicy(Policy):
                 action = self.controller.env.act_space.sample()
         else:
             state_idx = self.controller.state_to_idx(state)
-            action = self._get_masket_Q(state_idx, legal_actions).argmax(-1)
+            action = self._get_masked_Q(state_idx, legal_actions).argmax(-1)
         return action
 
 
@@ -162,7 +162,7 @@ class GreedyPolicy(Policy):
         else:
             self.Q = self.controller.Q
 
-    def _get_masket_Q(
+    def _get_masked_Q(
         self, state_idx: StateIndex, legal_actions: Union[List[int], None]
     ) -> np.ndarray:
         Q = self.Q[state_idx]
@@ -181,4 +181,4 @@ class GreedyPolicy(Policy):
     def __call__(self, state: State) -> int:
         state_idx = self.controller.state_to_idx(state)
         legal_actions = self.controller.env.legal_actions(state)
-        return int(self._get_masket_Q(state_idx, legal_actions).argmax(-1))
+        return int(self._get_masked_Q(state_idx, legal_actions).argmax(-1))
