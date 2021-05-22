@@ -466,8 +466,8 @@ def figure_6_3(figsize=(8, 6)):
 
 
 if __name__ == "__main__":
-    # example_6_2()
-    # figure_6_2()
-    # example_6_5()
-    # example_6_6()
+    example_6_2()
+    figure_6_2()
+    example_6_5()
+    example_6_6()
     figure_6_3()

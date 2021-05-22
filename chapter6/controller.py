@@ -26,11 +26,7 @@ class Policy(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def prob(self, *args: Any, **kwds: Any) -> float:
-        pass
-
-    @abstractmethod
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
+    def __call__(self, *args: Any, **kwds: Any) -> int:
         pass
 
 
@@ -75,7 +71,7 @@ class SARSAController(DiscreteController):
             current_state = self.env.state
             sum_reward = 0
             while not done and (max_iters is None or total_iters < max_iters):
-                action, _ = policy(current_state)
+                action = policy(current_state)
                 done, new_state, reward = self.env.step(action)
                 sum_reward += reward
                 total_iters += 1
@@ -88,7 +84,7 @@ class SARSAController(DiscreteController):
                 elif expected:
                     next_q = policy.V(new_state)
                 else:
-                    next_action, _ = target_policy(new_state)
+                    next_action = target_policy(new_state)
                     n_sa_idx = self.state_action_to_idx(new_state, next_action)
                     next_q = self.Q[n_sa_idx]
                 self.Q[c_sa_idx] += alpha * (
@@ -101,7 +97,10 @@ class SARSAController(DiscreteController):
 
 class EpsilonGreedyPolicy(Policy):
     def __init__(
-        self, controller: DiscreteController, epsilon: float, freeze: bool = False
+        self,
+        controller: DiscreteController,
+        epsilon: float,
+        freeze: Optional[bool] = False,
     ):
         self.controller = controller
         self.epsilon = epsilon
@@ -129,30 +128,21 @@ class EpsilonGreedyPolicy(Policy):
         probs[greedy] += 1.0 - self.epsilon
         return (self.Q[state_idx] * probs).sum(-1)
 
-    def prob(self, state: State, action: int) -> float:
+    def __call__(self, state: State) -> int:
         greedy_action = self.greedy_action(state)
-        prob = self._base_prob
-        if action == greedy_action:
-            prob += 1.0 - self.epsilon
-        return prob
-
-    def __call__(self, state: State) -> Tuple[int, float]:
-        greedy_action = self.greedy_action(state)
-        prob = self._base_prob
         if np.random.uniform() < self.epsilon:
             action = self.controller.env.act_space.sample()
         else:
             action = greedy_action
 
         if action == greedy_action:
-            prob += 1.0 - self.epsilon
             action = greedy_action
 
-        return action, prob
+        return action
 
 
 class GreedyPolicy(Policy):
-    def __init__(self, controller: DiscreteController, freeze: bool = False):
+    def __init__(self, controller: DiscreteController, freeze: Optional[bool] = False):
         self.controller = controller
         self.freeze = freeze
         self.update()
@@ -168,13 +158,10 @@ class GreedyPolicy(Policy):
         return int(self.Q[state_idx].argmax(-1))
 
     def V(self, state: State) -> float:
-        state_idx = self.controller.state_action_to_idx(
+        state_action_idx = self.controller.state_action_to_idx(
             state, self.greedy_action(state)
         )
-        return self.Q[state_idx]
+        return self.Q[state_action_idx]
 
-    def prob(self, state: State, action: int) -> float:
-        return float(action == self.greedy_action(state))
-
-    def __call__(self, state: State) -> Tuple[int, float]:
-        return self.greedy_action(state), 1.0
+    def __call__(self, state: State) -> int:
+        return self.greedy_action(state)
