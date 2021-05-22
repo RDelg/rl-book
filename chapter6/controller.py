@@ -11,19 +11,32 @@ from chapter5.controller import DiscreteController
 
 
 class Policy(metaclass=ABCMeta):
-    def __init__(self, controller: DiscreteController, *args: Any, **kwds: Any):
+    def __init__(self, *args: Any, **kwargs: Any):
+        self.controller = None
+        self.freeze = None
+
+    def _get_masked_Q(
+        self, state_idx: StateIndex, legal_actions: Union[List[int], None]
+    ) -> np.ndarray:
+        Q = self.Q[state_idx]
+        if legal_actions is not None:
+            mask = np.zeros_like(Q)
+            mask[legal_actions] = 0
+            Q = ma.masked_array(Q, mask)
+        return Q
+
+    def update(self):
+        if self.freeze:
+            self.Q = np.copy(self.controller.Q)
+        else:
+            self.Q = self.controller.Q
+
+    @abstractmethod
+    def V(self, *args: Any, **kwargs: Any) -> float:
         pass
 
     @abstractmethod
-    def update(self, *args: Any, **kwds: Any):
-        pass
-
-    @abstractmethod
-    def V(self, *args: Any, **kwds: Any) -> float:
-        pass
-
-    @abstractmethod
-    def __call__(self, *args: Any, **kwds: Any) -> int:
+    def __call__(self, *args: Any, **kwargs: Any) -> int:
         pass
 
 
@@ -104,22 +117,6 @@ class EpsilonGreedyPolicy(Policy):
         self.freeze = freeze
         self.update()
 
-    def update(self):
-        if self.freeze:
-            self.Q = np.copy(self.controller.Q)
-        else:
-            self.Q = self.controller.Q
-
-    def _get_masked_Q(
-        self, state_idx: StateIndex, legal_actions: Union[List[int], None]
-    ) -> np.ndarray:
-        Q = self.Q[state_idx]
-        if legal_actions is not None:
-            mask = np.zeros_like(Q)
-            mask[legal_actions] = 0
-            Q = ma.masked_array(Q, mask)
-        return Q
-
     def V(self, state: State) -> float:
         state_idx = self.controller.state_to_idx(state)
         legal_actions = self.controller.env.legal_actions(state)
@@ -127,13 +124,11 @@ class EpsilonGreedyPolicy(Policy):
 
         if legal_actions is not None:
             base_prob = self.epsilon * 1.0 / len(legal_actions)
-            probs = np.ones(self.controller.env.act_space.n) * base_prob
         else:
             base_prob = self.epsilon * 1.0 / self.controller.env.act_space.n
-            probs = np.ones(self.controller.env.act_space.n) * base_prob
 
+        probs = np.ones(self.controller.env.act_space.n) * base_prob
         greedy_action = Q.argmax(-1)
-
         probs[greedy_action] += 1.0 - self.epsilon
         return (Q * probs).sum(-1)
 
@@ -156,26 +151,8 @@ class GreedyPolicy(Policy):
         self.freeze = freeze
         self.update()
 
-    def update(self):
-        if self.freeze:
-            self.Q = np.copy(self.controller.Q)
-        else:
-            self.Q = self.controller.Q
-
-    def _get_masked_Q(
-        self, state_idx: StateIndex, legal_actions: Union[List[int], None]
-    ) -> np.ndarray:
-        Q = self.Q[state_idx]
-        if legal_actions is not None:
-            mask = np.zeros_like(Q)
-            mask[legal_actions] = 0
-            Q = ma.masked_array(Q, mask)
-        return Q
-
     def V(self, state: State) -> float:
-        state_action_idx = self.controller.state_action_to_idx(
-            state, self.greedy_action(state)
-        )
+        state_action_idx = self.controller.state_action_to_idx(state, self(state))
         return self.Q[state_action_idx]
 
     def __call__(self, state: State) -> int:
