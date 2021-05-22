@@ -161,6 +161,7 @@ def _figure_6_2_right(
 
 
 def example_6_2(figsize=(12, 6)):
+    print("Example 6.2")
     n_states = 5
     init_value = 0.5
     # Plot
@@ -172,6 +173,7 @@ def example_6_2(figsize=(12, 6)):
 
 
 def figure_6_2(figsize=(12, 6)):
+    print("Figure 6.2")
     n_states = 5
     init_value = 0.5
 
@@ -205,6 +207,7 @@ def figure_6_2(figsize=(12, 6)):
 
 
 def example_6_5(figsize=(8, 6), plot_q_learning: Optional[bool] = False):
+    print("Example 6.5")
     env = WindyGridWorld(7, 10, winds=[0, 0, 0, 1, 1, 1, 1, 2, 2, 0], reward_pos=[3, 7])
     controller = SARSAController(env)
     policy = EpsilonGreedyPolicy(controller, 0.1)
@@ -277,6 +280,7 @@ def _predict(
 
 
 def example_6_6(figsize=(8, 6), plot_expected_sarsa: Optional[bool] = False):
+    print("Example 6.6")
     env = CliffGridWorld(4, 12)
     controller = SARSAController(env)
     policy = partial(EpsilonGreedyPolicy, epsilon=0.1)
@@ -320,6 +324,7 @@ def example_6_6(figsize=(8, 6), plot_expected_sarsa: Optional[bool] = False):
 
 
 def figure_6_3(figsize=(8, 6)):
+    print("Figure 6.3")
     env = CliffGridWorld(4, 12)
     controller = SARSAController(env)
     policy = partial(EpsilonGreedyPolicy, epsilon=0.1)
@@ -470,4 +475,4 @@ if __name__ == "__main__":
     figure_6_2()
     example_6_5()
     example_6_6()
-    figure_6_3()
+    # figure_6_3()

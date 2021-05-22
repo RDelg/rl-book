@@ -70,6 +70,9 @@ class Enviroment(metaclass=ABCMeta):
     def act_space(self) -> DiscreteSpace:
         return self._act_space
 
+    def legal_actions(self, state: State) -> Union[List[int], None]:
+        return None
+
 
 class BlackJack(Enviroment):
     _DEALER_THRESHOLD = 17
