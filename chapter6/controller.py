@@ -123,9 +123,9 @@ class EpsilonGreedyPolicy(Policy):
         Q = self._get_masked_Q(state_idx, legal_actions)
 
         if legal_actions is not None:
-            base_prob = self.epsilon * 1.0 / len(legal_actions)
+            base_prob = self.epsilon / len(legal_actions)
         else:
-            base_prob = self.epsilon * 1.0 / self.controller.env.act_space.n
+            base_prob = self.epsilon / self.controller.env.act_space.n
 
         probs = np.ones(self.controller.env.act_space.n) * base_prob
         greedy_action = Q.argmax(-1)

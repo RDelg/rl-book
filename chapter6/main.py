@@ -475,4 +475,4 @@ if __name__ == "__main__":
     figure_6_2()
     example_6_5()
     example_6_6()
-    # figure_6_3()
+    figure_6_3()
