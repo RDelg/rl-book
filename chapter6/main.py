@@ -2,13 +2,14 @@ from typing import Any, Callable, List, Optional, Type
 import multiprocessing
 import concurrent.futures
 from functools import partial
+from itertools import zip_longest
 
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from chapter5.predictor import MonteCarloPredictor, Predictor
-from chapter6.env import CliffGridWorld, RandomWalk, WindyGridWorld
+from chapter6.env import CliffGridWorld, RandomWalk, WindyGridWorld, DoubleState
 from chapter6.predictor import TDPredictor
 from chapter6.controller import (
     Policy,
@@ -57,8 +58,16 @@ def _evaluate_with_random_policy(
     return error_history
 
 
-def _parallel_evaluation(func: Callable, n_runs: int, *args, **kwargs) -> np.ndarray:
-    run_errors = []
+def _parallel_evaluation(
+    func: Callable,
+    n_runs: int,
+    *args,
+    reduce_func: Optional[Callable[[List[Any]], np.ndarray]] = lambda x: np.array(
+        x
+    ).mean(0),
+    **kwargs,
+) -> np.ndarray:
+    run_results = []
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=multiprocessing.cpu_count() * 2
     ) as executor:
@@ -66,9 +75,9 @@ def _parallel_evaluation(func: Callable, n_runs: int, *args, **kwargs) -> np.nda
     for future in tqdm(
         concurrent.futures.as_completed(future_error), total=n_runs, disable=False
     ):
-        run_errors.append(future.result())
+        run_results.append(future.result())
 
-    return np.array(run_errors).mean(0)
+    return reduce_func(run_results)
 
 
 def _figure_6_2_right(
@@ -262,6 +271,7 @@ def _predict(
     n_episodes: int,
     alpha: float,
     *args: Any,
+    return_val: Optional[str] = "sum_reward",
     **kwds: Any,
 ) -> List[float]:
     controller.reset()
@@ -275,8 +285,7 @@ def _predict(
         *args,
         **kwds,
     )
-
-    return history["sum_reward"]
+    return history[return_val]
 
 
 def example_6_6(figsize=(8, 6), plot_expected_sarsa: Optional[bool] = False):
@@ -470,9 +479,77 @@ def figure_6_3(figsize=(8, 6)):
     fig.savefig("figure_6_3.png", dpi=100)
 
 
+def figure_6_5(figsize=(8, 6)):
+    print("Figure 6.5")
+    env = DoubleState()
+    controller = SARSAController(env)
+    double_q_controller = SARSAController(env, double=True)
+    policy = partial(EpsilonGreedyPolicy, epsilon=0.1)
+    target_policy = GreedyPolicy
+
+    n_runs = 10_000
+    episodes = 300
+    alpha = 0.3
+
+    def pct_left(actions_per_episode: List[List[int]]) -> np.ndarray:
+        first_actions = [[y[0] for y in x] for x in actions_per_episode]
+        return np.array(first_actions).mean(0)
+
+    q_learning = _parallel_evaluation(
+        _predict,
+        n_runs,
+        controller,
+        policy,
+        target_policy,
+        episodes,
+        alpha,
+        reduce_func=pct_left,
+        return_val="actions_per_episode",
+    )
+
+    double_q_learning = _parallel_evaluation(
+        _predict,
+        n_runs,
+        double_q_controller,
+        policy,
+        target_policy,
+        episodes,
+        alpha,
+        reduce_func=pct_left,
+        return_val="actions_per_episode",
+    )
+
+    # Plot
+    fig = plt.figure(figsize=figsize)
+    ax = fig.subplots(1, 1)
+    ax.plot(
+        q_learning,
+        color="r",
+        label="q-learning",
+    )
+    ax.plot(
+        double_q_learning,
+        color="g",
+        label="double q-learning",
+    )
+
+    ax.plot(
+        np.ones_like(double_q_learning) * 0.05,
+        color="k",
+        linestyle="--",
+        label="optimal",
+    )
+    ax.legend()
+    ax.set_ylim(0, 1)
+    ax.set_ylabel("% left actions from A", size=12)
+    ax.set_xlabel("Episodes", size=12)
+    fig.savefig("figure_6_5.png", dpi=100)
+
+
 if __name__ == "__main__":
     example_6_2()
     figure_6_2()
     example_6_5()
     example_6_6()
     figure_6_3()
+    figure_6_5()

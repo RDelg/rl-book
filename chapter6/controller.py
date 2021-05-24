@@ -20,16 +20,13 @@ class Policy(metaclass=ABCMeta):
     ) -> np.ndarray:
         Q = self.Q[state_idx]
         if legal_actions is not None:
-            mask = np.zeros_like(Q)
+            mask = np.ones_like(Q)
             mask[legal_actions] = 0
             Q = ma.masked_array(Q, mask)
         return Q
 
-    def update(self):
-        if self.freeze:
-            self.Q = np.copy(self.controller.Q)
-        else:
-            self.Q = self.controller.Q
+    def update(self, Q: np.ndarray):
+        self.Q = Q
 
     @abstractmethod
     def V(self, *args: Any, **kwargs: Any) -> float:
@@ -41,15 +38,19 @@ class Policy(metaclass=ABCMeta):
 
 
 class SARSAController(DiscreteController):
-    def __init__(self, env: Enviroment, gamma: float = 1.0):
+    def __init__(
+        self, env: Enviroment, gamma: float = 1.0, double: Optional[bool] = False
+    ):
         super(SARSAController, self).__init__(env)
         self.gamma = gamma
+        self.double_q = double
         self.reset()
 
     def reset(self):
-        self.posible_actions = self.env.act_space.to_list()
         shape = [dim.n for dim in self.env.obs_space] + [self._n_actions]
         self.Q = np.zeros(shape=shape, dtype=np.float32)
+        if self.double_q:
+            self.Q_2 = np.zeros_like(self.Q)
 
     def predict(
         self,
@@ -64,7 +65,7 @@ class SARSAController(DiscreteController):
     ):
         target_policy = target_policy or policy
 
-        history = {"dones_iter": [], "sum_reward": []}
+        history = {"dones_iter": [], "sum_reward": [], "actions_per_episode": []}
         total_iters = 0
 
         for _ in trange(
@@ -80,13 +81,26 @@ class SARSAController(DiscreteController):
             reward = 0
             current_state = self.env.state
             sum_reward = 0
+            actions = []
             while not done and (max_iters is None or total_iters < max_iters):
+
+                if self.double_q:
+                    if np.random.rand() < 0.5:
+                        Q = self.Q
+                        target_policy.update(self.Q_2)
+                    else:
+                        Q = self.Q_2
+                        target_policy.update(self.Q)
+                else:
+                    Q = self.Q
                 action = policy(current_state)
+                actions.append(action)
                 done, new_state, reward = self.env.step(action)
                 sum_reward += reward
                 total_iters += 1
                 c_sa_idx = self.state_action_to_idx(current_state, action)
                 if done:
+                    history["actions_per_episode"].append(actions)
                     history["dones_iter"].append(total_iters)
                     history["sum_reward"].append(sum_reward)
                     next_action = None
@@ -96,12 +110,9 @@ class SARSAController(DiscreteController):
                 else:
                     next_action = target_policy(new_state)
                     n_sa_idx = self.state_action_to_idx(new_state, next_action)
-                    next_q = self.Q[n_sa_idx]
-                self.Q[c_sa_idx] += alpha * (
-                    (reward + self.gamma * next_q) - self.Q[c_sa_idx]
-                )
+                    next_q = Q[n_sa_idx]
+                Q[c_sa_idx] += alpha * ((reward + self.gamma * next_q) - Q[c_sa_idx])
                 current_state = new_state
-
         return history
 
 
@@ -110,12 +121,10 @@ class EpsilonGreedyPolicy(Policy):
         self,
         controller: DiscreteController,
         epsilon: float,
-        freeze: Optional[bool] = False,
     ):
         self.controller = controller
         self.epsilon = epsilon
-        self.freeze = freeze
-        self.update()
+        self.update(self.controller.Q)
 
     def V(self, state: State) -> float:
         state_idx = self.controller.state_to_idx(state)
@@ -141,15 +150,15 @@ class EpsilonGreedyPolicy(Policy):
                 action = self.controller.env.act_space.sample()
         else:
             state_idx = self.controller.state_to_idx(state)
-            action = self._get_masked_Q(state_idx, legal_actions).argmax(-1)
+            Q = self._get_masked_Q(state_idx, legal_actions)
+            action = np.random.choice(np.where(Q == Q.max())[0])
         return action
 
 
 class GreedyPolicy(Policy):
-    def __init__(self, controller: DiscreteController, freeze: Optional[bool] = False):
+    def __init__(self, controller: DiscreteController):
         self.controller = controller
-        self.freeze = freeze
-        self.update()
+        self.update(self.controller.Q)
 
     def V(self, state: State) -> float:
         state_action_idx = self.controller.state_action_to_idx(state, self(state))
@@ -158,4 +167,5 @@ class GreedyPolicy(Policy):
     def __call__(self, state: State) -> int:
         state_idx = self.controller.state_to_idx(state)
         legal_actions = self.controller.env.legal_actions(state)
-        return int(self._get_masked_Q(state_idx, legal_actions).argmax(-1))
+        Q = self._get_masked_Q(state_idx, legal_actions)
+        return int(np.random.choice(np.where(Q == Q.max())[0]))

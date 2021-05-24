@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from chapter5.env import Enviroment, DiscreteDim, DiscreteSpace
 from chapter5.types import Observation, State
@@ -99,4 +99,40 @@ class CliffGridWorld(Enviroment):
             self._ns, self._ms = 0, 0
             reward = -100
         done = self._ns == 0 and self._ms == (self.m - 1)
+        return Observation(done, self.state, reward)
+
+
+class DoubleState(Enviroment):
+    def __init__(self, n: Optional[int] = 10):
+        assert n >= 10, "n must be greater than 10"
+        self.n = n
+        self._act_space = DiscreteDim(self.n, minimum=0)
+        self._obs_space = DiscreteSpace(DiscreteDim(2))
+        self._a_legal_actions = [0, 1]
+        self._b_legal_actions = list(range(1, n))
+        self.reset()
+
+    def reset(self):
+        self._s = 0
+
+    @property
+    def state(self) -> State:
+        return (self._s,)
+
+    def legal_actions(self, state: State) -> List[int]:
+        return self._b_legal_actions if state[0] else self._a_legal_actions
+
+    def step(self, action: int) -> Observation:
+        assert self.act_space.contains(action), f"Invalid action {action}"
+        if self._s == 0:
+            if action == 0:
+                reward = 0
+                done = True
+            else:
+                reward = 0
+                done = False
+                self._s = 1
+        else:
+            done = True
+            reward = np.random.randn() - 0.1
         return Observation(done, self.state, reward)
