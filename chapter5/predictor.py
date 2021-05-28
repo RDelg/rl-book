@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import trange, tqdm
 
 from .env import Enviroment
-from .types import State, StateIndex, Trajectory
+from .types import State, Trajectory
 
 
 class Predictor(metaclass=ABCMeta):
@@ -16,14 +16,7 @@ class Predictor(metaclass=ABCMeta):
 
     def reset(self):
         shape = [dim.n for dim in self.env.obs_space]
-        self._obs_space_mins = [x.minimum for x in self.env.obs_space.dims]
         self.V = np.zeros(shape=shape, dtype=np.float32)
-
-    def idx_to_state(self, idx: StateIndex) -> State:
-        return tuple(x + _min for x, _min in zip(idx, self._obs_space_mins))
-
-    def state_to_idx(self, state: StateIndex) -> State:
-        return tuple(x - _min for x, _min in zip(state, self._obs_space_mins))
 
     @abstractmethod
     def predict(self) -> None:
@@ -85,11 +78,10 @@ class MonteCarloPredictor(Predictor):
         for i in range(len(trajectory) - 2, -1, -1):
             G += self.gamma * trajectory[i + 1].reward
             previous_states.pop()
-            s = trajectory[i].state
-            if s not in previous_states:
-                s_idx = self.state_to_idx(s)
-                self.N[s_idx] += 1
-                self.V[s_idx] += alpha * (G - self.V[s_idx]) / self.N[s_idx]
+            state = trajectory[i].state
+            if state not in previous_states:
+                self.N[state] += 1
+                self.V[state] += alpha * (G - self.V[state]) / self.N[state]
 
     def reset(self, init_value: float = 0.0):
         super(MonteCarloPredictor, self).reset()

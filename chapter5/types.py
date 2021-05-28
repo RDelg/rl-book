@@ -2,8 +2,6 @@ from typing import List, Tuple, NamedTuple
 
 
 State = Tuple[int, ...]
-StateIndex = Tuple[int, ...]
-StateActionIndex = Tuple[int, ...]
 
 
 class Observation(NamedTuple):

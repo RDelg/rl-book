@@ -8,13 +8,13 @@ from chapter5.types import Observation, State
 class RandomWalk(Enviroment):
     def __init__(self, n: int = 5):
         assert n % 2, "n must be odd"
-        self.limit = n // 2
-        self._act_space = DiscreteDim(2, minimum=0)
-        self._obs_space = DiscreteSpace(DiscreteDim(n, minimum=-self.limit))
+        self.n = n
+        self._act_space = DiscreteDim(2)
+        self._obs_space = DiscreteSpace(DiscreteDim(n))
         self.reset()
 
     def reset(self):
-        self.s = 0
+        self.s = self.n // 2 + 1
 
     @property
     def state(self) -> State:
@@ -23,8 +23,8 @@ class RandomWalk(Enviroment):
     def step(self, action: int) -> Observation:
         assert self.act_space.contains(action), "Invalid action"
         self.s += action if action else -1
-        reward = 1 if self.s > self.limit else 0
-        done = np.abs(self.s) > self.limit
+        reward = 1 if self.s >= self.n else 0
+        done = self.s >= self.n or self.s < 0
         return Observation(done, self.state, reward)
 
 
@@ -40,7 +40,7 @@ class WindyGridWorld(Enviroment):
         self.m = m
         self.winds = winds
         self.reward_pos = reward_pos
-        self._act_space = DiscreteDim(4, minimum=0)
+        self._act_space = DiscreteDim(4)
         self._obs_space = DiscreteSpace(DiscreteDim(self.n), DiscreteDim(self.m))
         self.reset()
 
@@ -74,7 +74,7 @@ class CliffGridWorld(Enviroment):
         assert m > 2, f"m ({2}) must be greater than 2"
         self.n = n
         self.m = m
-        self._act_space = DiscreteDim(4, minimum=0)
+        self._act_space = DiscreteDim(4)
         self._obs_space = DiscreteSpace(DiscreteDim(self.n), DiscreteDim(self.m))
         self.reset()
 
@@ -106,7 +106,7 @@ class DoubleState(Enviroment):
     def __init__(self, n: Optional[int] = 10):
         assert n >= 10, "n must be greater than 10"
         self.n = n
-        self._act_space = DiscreteDim(self.n, minimum=0)
+        self._act_space = DiscreteDim(self.n)
         self._obs_space = DiscreteSpace(DiscreteDim(2))
         self._a_legal_actions = [0, 1]
         self._b_legal_actions = list(range(1, n))

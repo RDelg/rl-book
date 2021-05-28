@@ -49,7 +49,7 @@ def plot_policy(policy, ax=None, title="Policy"):
 def figure_5_1(figsize=(12, 12)):
     fig = plt.figure(figsize=figsize)
     env = BlackJack()
-    policy = lambda state: state[0] < 20
+    policy = lambda state: state[0] < 20 - env._min_sum
     for i, it in enumerate([10_000, 500_000]):
         mc = MonteCarloPredictor(env)
         mc.predict(policy, alpha=1.0, n_episodes=it)
