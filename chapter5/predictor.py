@@ -50,7 +50,6 @@ class MonteCarloPredictor(Predictor):
             finished, new_state, reward = self.env.step(action)
             current_state = new_state
         trajectory.add_step(finished, current_state, reward, None)
-        # print(trajectory)
         return trajectory
 
     def predict(
