@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import trange
 
 from .env import Enviroment
-from .types import StateIndex, Trajectory, State, StateActionIndex
+from .types import Trajectory, State
 
 
 class DiscreteController(metaclass=ABCMeta):
@@ -16,12 +16,6 @@ class DiscreteController(metaclass=ABCMeta):
     @abstractmethod
     def reset(self):
         raise NotImplementedError
-
-    def state_to_idx(self, state: State) -> StateIndex:
-        return tuple(x - dim.minimum for x, dim in zip(state, self.env.obs_space))
-
-    def state_action_to_idx(self, state: State, action: int) -> StateActionIndex:
-        return self.state_to_idx(state) + (action,)
 
 
 class MonteCarloController(DiscreteController):
@@ -51,7 +45,7 @@ class MonteCarloController(DiscreteController):
         finished, reward = False, 0
         trajectory = Trajectory()
         while not finished:
-            action_prob = policy[self.state_to_idx(current_state)]
+            action_prob = policy[current_state]
             action = np.random.choice(
                 self.posible_actions,
                 p=action_prob,
@@ -93,14 +87,13 @@ class MonteCarloController(DiscreteController):
             for i in range(len(trajectory) - 2, -1, -1):
                 G += trajectory[i + 1].reward
                 previous_states.pop()
-                _, s, _, a = trajectory[i]
+                _, state, _, action = trajectory[i]
                 # First visit
-                if s + (a,) not in previous_states:
-                    s_a_idx = self.state_action_to_idx(s, a)
-                    self.N[s_a_idx] += 1
-                    self.Q[s_a_idx] += (G - self.Q[s_a_idx]) / self.N[s_a_idx]
-                    policy[s_a_idx[:-1]] = self.generate_soft_policy(
-                        self.Q[s_a_idx[:-1]].argmax(-1),
+                if (idx := state + (action,)) not in previous_states:
+                    self.N[idx] += 1
+                    self.Q[idx] += (G - self.Q[idx]) / self.N[idx]
+                    policy[idx[:-1]] = self.generate_soft_policy(
+                        self.Q[idx[:-1]].argmax(-1),
                         epsilon=epsilon,
                         n_actions=self._n_actions,
                     )
@@ -122,11 +115,11 @@ class MonteCarloController(DiscreteController):
             W = 1.0
             for i in range(len(trajectory) - 2, -1, -1):
                 G += trajectory[i + 1].reward
-                _, s, _, a = trajectory[i]
-                s_a_idx = self.state_action_to_idx(s, a)
-                self.C[s_a_idx] += W
-                self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / self.C[s_a_idx])
-                W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
+                _, state, _, action = trajectory[i]
+                idx = state + (action,)
+                self.C[idx] += W
+                self.Q[idx] += (G - self.Q[idx]) * (W / self.C[idx])
+                W *= float(target_policy[idx[:-1]] == a) / b_policy[idx]
                 if W == 0.0:
                     break
 
@@ -147,11 +140,11 @@ class MonteCarloController(DiscreteController):
             W = 1.0
             for i in range(len(trajectory) - 2, -1, -1):
                 G += trajectory[i + 1].reward
-                _, s, _, a = trajectory[i]
-                s_a_idx = self.state_action_to_idx(s, a)
-                self.WG[s_a_idx] += W * G
-                self.N[s_a_idx] += 1
-                W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
+                _, state, _, action = trajectory[i]
+                idx = state + (action,)
+                self.WG[idx] += W * G
+                self.N[idx] += 1
+                W *= float(target_policy[idx[:-1]] == action) / b_policy[idx]
 
         with np.nditer(
             [self.Q, self.WG, self.N],
@@ -180,11 +173,11 @@ class MonteCarloController(DiscreteController):
             W = 1
             for i in range(len(trajectory) - 2, -1, -1):
                 G += trajectory[i + 1].reward
-                _, s, _, a = trajectory[i]
-                s_a_idx = self.state_action_to_idx(s, a)
-                self.C[s_a_idx] += W
-                self.Q[s_a_idx] += (G - self.Q[s_a_idx]) * (W / self.C[s_a_idx])
-                W *= float(target_policy[s_a_idx[:-1]] == a) / b_policy[s_a_idx]
+                _, state, _, action = trajectory[i]
+                idx = state + (action,)
+                self.C[idx] += W
+                self.Q[idx] += (G - self.Q[idx]) * (W / self.C[idx])
+                W *= float(target_policy[idx[:-1]] == action) / b_policy[idx]
                 if W == 0.0:
                     break
             target_policy[...] = self.Q.argmax(-1)
