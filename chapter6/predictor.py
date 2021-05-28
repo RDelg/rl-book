@@ -78,7 +78,7 @@ class TDPredictor(Predictor):
         done: bool,
         reward: float,
     ) -> None:
-        c_s_idx = self.state_to_idx(current_state)
-        n_s_idx = self.state_to_idx(new_state)
-        next_v = 0 if done else self.V[n_s_idx]
-        self.V[c_s_idx] += alpha * (reward + self.gamma * next_v - self.V[c_s_idx])
+        next_v = 0 if done else self.V[new_state]
+        self.V[current_state] += alpha * (
+            reward + self.gamma * next_v - self.V[current_state]
+        )

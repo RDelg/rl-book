@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import trange, tqdm
 
 from .env import Enviroment
-from .types import State, StateIndex, Trajectory
+from .types import State, Trajectory
 
 
 class Predictor(metaclass=ABCMeta):

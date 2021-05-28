@@ -6,7 +6,7 @@ import numpy.ma as ma
 from tqdm import trange
 
 from chapter5.env import Enviroment
-from chapter5.types import State, StateIndex
+from chapter5.types import State
 from chapter5.controller import DiscreteController
 
 
@@ -16,9 +16,9 @@ class Policy(metaclass=ABCMeta):
         self.freeze = None
 
     def _get_masked_Q(
-        self, state_idx: StateIndex, legal_actions: Union[List[int], None]
+        self, state: State, legal_actions: Union[List[int], None]
     ) -> np.ndarray:
-        Q = self.Q[state_idx]
+        Q = self.Q[state]
         if legal_actions is not None:
             mask = np.ones_like(Q)
             mask[legal_actions] = 0
@@ -98,7 +98,7 @@ class SARSAController(DiscreteController):
                 done, new_state, reward = self.env.step(action)
                 sum_reward += reward
                 total_iters += 1
-                c_sa_idx = self.state_action_to_idx(current_state, action)
+                c_sa_idx = current_state + (action,)
                 if done:
                     history["actions_per_episode"].append(actions)
                     history["dones_iter"].append(total_iters)
@@ -109,7 +109,7 @@ class SARSAController(DiscreteController):
                     next_q = policy.V(new_state)
                 else:
                     next_action = target_policy(new_state)
-                    n_sa_idx = self.state_action_to_idx(new_state, next_action)
+                    n_sa_idx = new_state + (next_action,)
                     next_q = Q[n_sa_idx]
                 Q[c_sa_idx] += alpha * ((reward + self.gamma * next_q) - Q[c_sa_idx])
                 current_state = new_state
@@ -127,9 +127,8 @@ class EpsilonGreedyPolicy(Policy):
         self.update(self.controller.Q)
 
     def V(self, state: State) -> float:
-        state_idx = self.controller.state_to_idx(state)
         legal_actions = self.controller.env.legal_actions(state)
-        Q = self._get_masked_Q(state_idx, legal_actions)
+        Q = self._get_masked_Q(state, legal_actions)
 
         if legal_actions is not None:
             base_prob = self.epsilon / len(legal_actions)
@@ -149,8 +148,7 @@ class EpsilonGreedyPolicy(Policy):
             else:
                 action = self.controller.env.act_space.sample()
         else:
-            state_idx = self.controller.state_to_idx(state)
-            Q = self._get_masked_Q(state_idx, legal_actions)
+            Q = self._get_masked_Q(state, legal_actions)
             action = np.random.choice(np.where(Q == Q.max())[0])
         return action
 
@@ -161,11 +159,9 @@ class GreedyPolicy(Policy):
         self.update(self.controller.Q)
 
     def V(self, state: State) -> float:
-        state_action_idx = self.controller.state_action_to_idx(state, self(state))
-        return self.Q[state_action_idx]
+        return self.Q[state + (self(state),)]
 
     def __call__(self, state: State) -> int:
-        state_idx = self.controller.state_to_idx(state)
         legal_actions = self.controller.env.legal_actions(state)
-        Q = self._get_masked_Q(state_idx, legal_actions)
+        Q = self._get_masked_Q(state, legal_actions)
         return int(np.random.choice(np.where(Q == Q.max())[0]))
