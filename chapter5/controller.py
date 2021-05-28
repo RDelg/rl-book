@@ -119,7 +119,7 @@ class MonteCarloController(DiscreteController):
                 idx = state + (action,)
                 self.C[idx] += W
                 self.Q[idx] += (G - self.Q[idx]) * (W / self.C[idx])
-                W *= float(target_policy[idx[:-1]] == a) / b_policy[idx]
+                W *= float(target_policy[idx[:-1]] == action) / b_policy[idx]
                 if W == 0.0:
                     break
 
