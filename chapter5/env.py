@@ -8,10 +8,9 @@ from .types import Observation, State
 
 
 class DiscreteDim:
-    def __init__(self, n: int, minimum: int = 0):
+    def __init__(self, n: int):
         assert n > 1, "n must be greater than 1"
         self.n = n
-        self.minimum = minimum
 
     def contains(self, x: Union[int, np.ndarray]) -> bool:
         if isinstance(x, (np.generic, np.ndarray)) and (
@@ -21,13 +20,13 @@ class DiscreteDim:
         if not isinstance(x, int):
             return False
         else:
-            return x - self.minimum <= self.n
+            return x <= self.n
 
     def to_list(self) -> List[str]:
-        return list(range(self.minimum, self.minimum + self.n))
+        return list(range(self.n))
 
     def sample(self) -> int:
-        return np.random.randint(self.minimum, self.minimum + self.n)
+        return np.random.randint(0, self.n)
 
 
 class DiscreteSpace:
@@ -98,10 +97,13 @@ class BlackJack(Enviroment):
         Card("K", 10),
     ]
 
+    _min_sum: int = 12
+    _min_card_value: int = 1
+
     def __init__(self):
         self._act_space = DiscreteDim(2)
         self._obs_space = DiscreteSpace(
-            DiscreteDim(10, minimum=12), DiscreteDim(2), DiscreteDim(10, minimum=1)
+            DiscreteDim(10), DiscreteDim(2), DiscreteDim(10)
         )
         self.reset()
 
@@ -121,16 +123,18 @@ class BlackJack(Enviroment):
     @property
     def state(self) -> State:
         return (
-            self.player_sum,
+            self.player_sum - self._min_sum,
             int(self.usable_ace),
-            self.dealer_card.value,
+            self.dealer_card.value - self._min_card_value,
         )
 
     @state.setter
     def state(self, state: Tuple[int, int, int]):
-        self.player_sum = state[0]
+        self.player_sum = state[0] + self._min_sum
         self.usable_ace = bool(state[1])
-        self.dealer_card = [c for c in self._CARDS if c.value == state[2]][0]
+        self.dealer_card = [
+            c for c in self._CARDS if c.value - self._min_card_value == state[2]
+        ][0]
         self._dealer_usable_ace = self.dealer_card.letter == "A"
 
     def _hit(self, current_sum: int, usable_ace: bool) -> Tuple[int, bool]:
@@ -182,7 +186,7 @@ class SingleState(Enviroment):
     _LEFT_ACTION = 0
 
     def __init__(self):
-        self._act_space = DiscreteDim(2, minimum=0)
+        self._act_space = DiscreteDim(2)
         self._obs_space = DiscreteSpace(DiscreteDim(2))
         self.reset()
 
