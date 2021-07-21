@@ -1,4 +1,4 @@
-from typing import Tuple, Type, List
+from typing import Tuple, List
 from functools import lru_cache
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
@@ -45,9 +45,8 @@ class Enviroment(metaclass=ABCMeta):
 
     def __init__(self, gamma: float):
         self.gamma = gamma
-        # Instantiate spaces to reduce allocations
-        self._obs_space = self.obs_space()
-        self._act_space = self.act_space()
+        self._obs_space = None
+        self._act_space = None
 
     @abstractmethod
     def dynamics(self, *args, **kwargs) -> float:
@@ -58,21 +57,19 @@ class Enviroment(metaclass=ABCMeta):
     def legal_actions(self, *args, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
-    @staticmethod
-    @abstractmethod
-    def obs_space() -> Space:
-        raise NotImplementedError
+    @property
+    def obs_space(self) -> Space:
+        return self._obs_space
 
-    @staticmethod
-    @abstractmethod
-    def act_space() -> Space:
-        raise NotImplementedError
+    @property
+    def act_space(self) -> Space:
+        return self._act_space
 
     def idx_to_state(self, idx: Tuple[int, ...]) -> Tuple[int, ...]:
-        return tuple(x + self._obs_space.min for x in idx)
+        return tuple(x + self.obs_space.min for x in idx)
 
     def state_to_idx(self, state: Tuple[int, ...]) -> Tuple[int, ...]:
-        return tuple(x - self._obs_space.min for x in state)
+        return tuple(x - self.obs_space.min for x in state)
 
 
 class RentalCarEnv(Enviroment):
@@ -104,21 +101,15 @@ class RentalCarEnv(Enviroment):
         self._request_a_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_a)
         self._return_b_pmf = poisson.pmf(range(self._poisson_range), self._lam_in_b)
         self._request_b_pmf = poisson.pmf(range(self._poisson_range), self._lam_out_b)
-
-    @staticmethod
-    def obs_space() -> Space:
-        return Space([2], 0, 20)
-
-    @staticmethod
-    def act_space() -> Space:
-        return Space([1], -5, 5)
+        self._obs_space = Space([2], 0, 20)
+        self._act_space = Space([1], -5, 5)
 
     @staticmethod
     @lru_cache(maxsize=None)
     def legal_actions(state: Tuple[int, int]) -> np.ndarray:
         return np.arange(
-            np.max([-state[1], RentalCarEnv.act_space().min]),
-            np.min([state[0], RentalCarEnv.act_space().max]) + 1,
+            np.max([-state[1], -5]),
+            np.min([state[0], 5]) + 1,
             1,
             dtype=np.int32,
         )
@@ -219,14 +210,8 @@ class GamblerEnv(Enviroment):
 
     def __init__(self, gamma: float = 1.0):
         super().__init__(gamma)
-
-    @staticmethod
-    def obs_space() -> Space:
-        return Space([1], 1, 99)
-
-    @staticmethod
-    def act_space() -> Space:
-        return Space([1], 1, 99)
+        self._act_space = Space([1], 1, 99)
+        self._obs_space = Space([1], 1, 99)
 
     def dynamics(
         self, estimated_value: np.ndarray, state: Tuple[int], action: int
@@ -279,14 +264,8 @@ class GridEnv(Enviroment):
 
     def __init__(self, gamma: float = 1.0):
         super().__init__(gamma)
-
-    @staticmethod
-    def obs_space() -> Space:
-        return Space([2], 0, 3)
-
-    @staticmethod
-    def act_space() -> Space:
-        return Space([1], 0, 3)
+        self._obs_space = Space([2], 0, 3)
+        self._act_space = Space([1], 0, 3)
 
     def is_terminal(self, state: Tuple[int, int]) -> bool:
         for terminal_state in self._terminal_states:
@@ -324,4 +303,4 @@ class GridEnv(Enviroment):
     @staticmethod
     @lru_cache(maxsize=None)
     def legal_actions(state: Tuple[int, int]) -> np.ndarray:
-        return np.arange(GridEnv.act_space().max + 1, dtype=np.int32)
+        return np.arange(3 + 1, dtype=np.int32)

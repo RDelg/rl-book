@@ -7,7 +7,7 @@ from chapter4.env import GridEnv, RentalCarEnv, GamblerEnv
 
 
 def figure_4_1():
-
+    print("Figure 4_1")
     env = GridEnv()
     learner = DynamicPolicyLearner(env)
 
@@ -117,6 +117,7 @@ def figure_4_1():
 
 
 def figure_4_2():
+    print("Figure 4_2")
     env = RentalCarEnv()
     learner = DynamicPolicyLearner(env)
 
@@ -127,9 +128,9 @@ def figure_4_2():
         img = np.flipud(learner.policy)
         ax.imshow(
             img,
-            cmap=plt.get_cmap("Spectral"),
-            vmin=RentalCarEnv.act_space().min,
-            vmax=RentalCarEnv.act_space().max,
+            cmap=plt.get_cmap("Spectral_r"),
+            vmin=env.act_space.min,
+            vmax=env.act_space.max,
         )
 
         # We don't want to show all ticks...
@@ -161,7 +162,7 @@ def figure_4_2():
         x = np.arange(learner.obs_space_range)
         y = np.arange(learner.obs_space_range)
         X, Y = np.meshgrid(x, y)
-        ax.plot_surface(X, Y, np.fliplr(learner.value), cmap=plt.get_cmap("Spectral"))
+        ax.plot_surface(X, Y, np.fliplr(learner.value), cmap=plt.get_cmap("Spectral_r"))
 
         # We don't want to show all ticks...
         ticks_range = np.arange(learner.obs_space_range)
@@ -199,6 +200,7 @@ def figure_4_2():
 
 
 def figure_4_3():
+    print("Figure 4_3")
     # Aggresive policy
     initial_policy = np.array(
         [GamblerEnv.legal_actions((i + 1,)).max() for i in range(99)]

@@ -33,16 +33,16 @@ class DynamicPolicyLearner:
         initial_policy: Optional[np.ndarray] = None,
     ):
         assert (
-            len(env.obs_space().dims) == 1
+            len(env.obs_space.dims) == 1
         ), "Enviroment observation space dims must be 1 dimentional"
         assert (
-            len(env.obs_space().dims) == 1
+            len(env.obs_space.dims) == 1
         ), "Enviroment action space dims must be 1 dimentional"
 
-        self.obs_space_range = env.obs_space().max - env.obs_space().min + 1
-        self.action_space_range = env.act_space().max - env.act_space().min + 1
+        self.obs_space_range = env.obs_space.max - env.obs_space.min + 1
+        self.action_space_range = env.act_space.max - env.act_space.min + 1
         self.obs_space_shape = [
-            self.obs_space_range for _ in range(env.obs_space().dims[0])
+            self.obs_space_range for _ in range(env.obs_space.dims[0])
         ]
         self._eps = eps
         self._env = env
@@ -113,7 +113,9 @@ class DynamicPolicyLearner:
             delta = 0
             old_value = self.value.copy()
             with np.nditer(
-                [self.value], flags=["multi_index"], op_flags=[["readwrite"]],
+                [self.value],
+                flags=["multi_index"],
+                op_flags=[["readwrite"]],
             ) as it:
                 for val in tqdm(
                     it,
