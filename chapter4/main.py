@@ -1,8 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.table import Table
-from tqdm import tqdm
-from mpl_toolkits.mplot3d import Axes3D
 
 from chapter4.learner import DynamicPolicyLearner
 from chapter4.env import GridEnv, RentalCarEnv, GamblerEnv
@@ -123,7 +121,8 @@ def figure_4_2():
     learner = DynamicPolicyLearner(env)
 
     def plot_policy(
-        ax: plt.Axes, title: str = "Value",
+        ax: plt.Axes,
+        title: str = "Value",
     ):
         img = np.flipud(learner.policy)
         ax.imshow(
@@ -156,7 +155,8 @@ def figure_4_2():
         ax.set_title(title)
 
     def plot_value(
-        ax: plt.Axes, title: str = "Value",
+        ax: plt.Axes,
+        title: str = "Value",
     ):
         x = np.arange(learner.obs_space_range)
         y = np.arange(learner.obs_space_range)
