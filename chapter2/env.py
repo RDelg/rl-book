@@ -3,16 +3,30 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from typing import Union, List
 
+from pkg_resources import Environment
+
 
 class Enviroment(metaclass=ABCMeta):
     @abstractmethod
-    def reward(self, *args, **kwargs):
+    def step(self, action: int) -> float:
         raise NotImplementedError
 
 
-class KBandit(Enviroment):
+class KArmedEnviroment(Environment):
+    def __init__(self, k: int):
+        self.k = k
+        self.reset()
+
+    def reset(self):
+        pass
+
+    def step(self, action: int) -> float:
+        raise NotImplementedError
+
+
+class NormalKBandit(KArmedEnviroment):
     """
-    K-arms bandit enviroment.
+    K-arms bandit enviroment where the reward_k for the k-th arm is a normal distribution with mean=mean_k and std=1.
 
     Parameters
     ----------
@@ -23,13 +37,13 @@ class KBandit(Enviroment):
         Offset value(s) to sum to arm rewards.
 
     stationary : bool, default=True
-        If not True, then the reward "moves" each step using a 
+        If not True, then the reward "moves" each step using a
         normal distribution with mean 'walk_size' and std of 1.
 
     walk_size : float, default=0.1
         Mean value of normal distribution to use to calculate
         the reward walk.
-    
+
     """
 
     def __init__(
@@ -39,23 +53,22 @@ class KBandit(Enviroment):
         stationary: bool = True,
         walk_size: float = 0.1,
     ):
-        self.k = k
+
         self.offset = offset
         self.stationary = stationary
         self.walk_size = walk_size
-        self.init_or_reset()
+        super().__init__(k)
 
-    def init_or_reset(self):
+    def reset(self):
         self.mean = np.random.randn((self.k)) + self.offset
         self.best_action = np.argmax(self.mean)
 
-    def reset(self):
-        self.init_or_reset()
+    def _walk(self):
+        self.mean += np.random.normal(scale=self.walk_size, size=(self.k))
+        self.best_action = np.argmax(self.mean)
 
-    def reward(self, n_steps):
-        reward = np.random.normal(self.mean, 1, (n_steps, self.k))
-        if not self.stationary:  # walk
-            reward += np.cumsum(
-                np.random.normal(scale=self.walk_size, size=(n_steps, self.k)), axis=0
-            )
+    def step(self, action: int) -> float:
+        if not self.stationary:
+            self._walk()
+        reward = np.random.normal(loc=self.mean[action], scale=1.0)
         return reward
