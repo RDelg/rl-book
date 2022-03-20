@@ -58,6 +58,37 @@ class MeanLearner(BaseLearner):
         super().reset()
 
 
+class UCBLearner(BaseLearner):
+    """
+    Upper Confidence Bound (UCB) algorithm.
+    """
+
+    def __init__(
+        self, env: KArmedEnviroment, initial_Q: float, c: float = 0.0, **kwargs
+    ):
+        self.initial_Q = initial_Q
+        self.c = c
+        super().__init__(env)
+
+    def play_one(self, policy: Callable[[np.ndarray], int]) -> Observation:
+        action = policy(
+            self.Q
+            + self.c
+            * np.sqrt(np.divide(np.log(self.steps + 1), self.actions_count + 1e-5))
+        )
+        reward = self.env.step(action)
+        self.actions_count[action] += 1
+        self.Q[action] += 1 / self.actions_count[action] * (reward - self.Q[action])
+        self.steps += 1
+        return Observation(action=action, reward=reward)
+
+    def reset(self):
+        self.actions_count = np.zeros(self.env.k)
+        self.steps = 0
+        super().reset()
+        self.Q += self.initial_Q
+
+
 def random_policy(Q: np.ndarray) -> int:
     """
     Random policy.

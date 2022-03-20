@@ -5,7 +5,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from chapter2.env import NormalKBandit
-from chapter2.learner import MeanLearner, e_greedy_policy
+from chapter2.learner import MeanLearner, UCBLearner, e_greedy_policy, greedy_policy
 
 
 class Experiment:
@@ -47,6 +47,8 @@ class Experiment:
         T = config.get("learner", {}).get("type", "mean")
         if T == "mean":
             return MeanLearner(env=env, **config.get("learner", {}).get("params", {}))
+        elif T == "ucb":
+            return UCBLearner(env=env, **config.get("learner", {}).get("params", {}))
         else:
             raise ValueError(f"Learner {T} not implemented")
 
@@ -54,6 +56,8 @@ class Experiment:
         T = config.get("policy", {}).get("type", "e_greedy")
         if T == "e_greedy":
             return e_greedy_policy(**config.get("policy", {}).get("params", {}))
+        elif T == "greedy":
+            return greedy_policy
         else:
             raise ValueError(f"Policy {T} not implemented")
 
@@ -132,26 +136,29 @@ def figure_2_2():
     f.savefig("figure_2_2.png", dpi=100)
 
 
-# def figure_2_3():
-#     print(f"Running figure_2_3")
-#     k = 10
-#     t = 1000
-#     runs = 2000
+def figure_2_3():
+    print(f"Running figure_2_3")
+    k = 10
+    t = 1000
+    runs = 2000
 
-#     configs = [
-#         {"learner": {"eps": 0.0, "initial": 5}},
-#         {"learner": {"eps": 0.1}},
-#     ]
+    configs = [
+        {
+            "policy": {"type": "greedy"},
+            "learner": {"type": "ucb", "params": {"initial_Q": 5}},
+        },
+        {"policy": {"type": "e_greedy", "params": {"epsilon": 0.1}}},
+    ]
 
-#     exp = Experiment(k, t, runs, configs)
-#     exp.run()
+    exp = Experiment(k, t, runs, configs)
+    exp.run()
 
-#     # plot
-#     f = plt.figure(figsize=(16, 8))
-#     axs = f.subplots(2, 1)
-#     exp.plot_mean_reward(axs[0])
-#     exp.plot_pct_correct(axs[1])
-#     f.savefig("figure_2_3.png", dpi=100)
+    # plot
+    f = plt.figure(figsize=(16, 8))
+    axs = f.subplots(2, 1)
+    exp.plot_mean_reward(axs[0])
+    exp.plot_pct_correct(axs[1])
+    f.savefig("figure_2_3.png", dpi=100)
 
 
 # def figure_2_4():
@@ -251,9 +258,9 @@ def figure_2_2():
 
 
 if __name__ == "__main__":
-    figure_2_1()
-    figure_2_2()
-    # figure_2_3()
+    # figure_2_1()
+    # figure_2_2()
+    figure_2_3()
     # figure_2_4()
     # figure_2_5()
     # figure_2_6()
