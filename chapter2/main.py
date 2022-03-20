@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from chapter2.env import NormalKBandit
 from chapter2.learner import (
-    MeanLearner,
+    AvgLearner,
     UCBLearner,
     GradientLearner,
     gradient_policy,
@@ -51,9 +51,9 @@ class Experiment:
         return NormalKBandit(k=self.k, **config.get("env", {}))
 
     def learner_factory(self, env, config: dict):
-        T = config.get("learner", {}).get("type", "mean")
-        if T == "mean":
-            return MeanLearner(env=env, **config.get("learner", {}).get("params", {}))
+        T = config.get("learner", {}).get("type", "avg")
+        if T == "avg":
+            return AvgLearner(env=env, **config.get("learner", {}).get("params", {}))
         elif T == "ucb":
             return UCBLearner(env=env, **config.get("learner", {}).get("params", {}))
         elif T == "gradient":
@@ -258,51 +258,71 @@ def figure_2_5():
     f.savefig("figure_2_5.png", dpi=100)
 
 
-# def figure_2_6():
-#     print(f"Running figure_2_6")
-#     k = 10
-#     t = 1000
-#     runs = 2000
-#     n = 10
+def figure_2_6():
+    print(f"Running figure_2_6")
+    k = 10
+    t = 1000
+    runs = 2000
+    n = 10
 
-#     eps_greedy = np.logspace(-7, -2, num=n, base=2)
-#     delta_gradient = np.logspace(-5, 2, num=n, base=2)
-#     c_UCB = np.logspace(-4, 2, num=n, base=2)
-#     q_optimistic = np.logspace(-2, 3, num=n, base=2)
+    eps_greedy = np.logspace(-7, -2, num=n, base=2)
+    delta_gradient = np.logspace(-5, 2, num=n, base=2)
+    c_UCB = np.logspace(-4, 2, num=n, base=2)
+    q_optimistic = np.logspace(-2, 3, num=n, base=2)
 
-#     cfg_eps_greedy = [{"learner": {"eps": x}} for x in eps_greedy]
-#     cfg_delta_gradient = [
-#         {"learner": {"delta": x, "gradient": True}} for x in delta_gradient
-#     ]
-#     cfg_c_UCB = [{"learner": {"c": x}} for x in c_UCB]
-#     cfg_q_optimistic = [
-#         {"learner": {"eps": 0, "delta": 0.1, "initial": x}} for x in q_optimistic
-#     ]
+    cfg_eps_greedy = [
+        {
+            "learner": {"type": "avg"},
+            "policy": {"type": "e_greedy", "params": {"epsilon": x}},
+        }
+        for x in eps_greedy
+    ]
+    cfg_delta_gradient = [
+        {
+            "learner": {"type": "gradient", "params": {"delta": x}},
+            "policy": {"type": "gradient"},
+        }
+        for x in delta_gradient
+    ]
+    cfg_c_UCB = [
+        {
+            "learner": {"type": "ucb", "params": {"c": x}},
+            "policy": {"type": "e_greedy", "params": {"epsilon": 0.01}},
+        }
+        for x in c_UCB
+    ]
+    cfg_q_optimistic = [
+        {
+            "learner": {"type": "ucb", "params": {"delta": 0.1, "initial_Q": x}},
+            "policy": {"type": "greedy"},
+        }
+        for x in q_optimistic
+    ]
 
-#     xs = [eps_greedy, delta_gradient, c_UCB, q_optimistic]
-#     ys = np.zeros((len(xs), n))
+    xs = [eps_greedy, delta_gradient, c_UCB, q_optimistic]
+    ys = np.zeros((len(xs), n))
 
-#     for i, configs in enumerate(
-#         [cfg_eps_greedy, cfg_delta_gradient, cfg_c_UCB, cfg_q_optimistic]
-#     ):
-#         exp = Experiment(k, t, runs, configs)
-#         exp.run()
-#         ys[i, :] = np.mean(exp.hist_R, axis=(0, 1))
+    for i, configs in enumerate(
+        [cfg_eps_greedy, cfg_delta_gradient, cfg_c_UCB, cfg_q_optimistic]
+    ):
+        exp = Experiment(k, t, runs, configs)
+        exp.run()
+        ys[i, :] = np.mean(exp.hist_R, axis=(0, 1))
 
-#     f = plt.figure(figsize=(16, 8))
-#     ax = f.subplots(1, 1)
-#     for x, y in zip(xs, ys):
-#         ax.semilogx(x, y, basex=2)
-#     ax.legend(["eps-greedy", "delta_gradient", "c_UCB", "q_optimistic delta=0.1"])
-#     ax.set_xlabel("Action", size=20)
-#     ax.set_ylabel("Average\n reward\n over first\n 1000 steps", size=20)
-#     f.savefig("figure_2_6.png", dpi=100)
+    f = plt.figure(figsize=(16, 8))
+    ax = f.subplots(1, 1)
+    for x, y in zip(xs, ys):
+        ax.semilogx(x, y, base=2)
+    ax.legend(["eps-greedy", "delta_gradient", "c_UCB", "q_optimistic delta=0.1"])
+    ax.set_xlabel("Action", size=20)
+    ax.set_ylabel("Average\n reward\n over first\n 1000 steps", size=20)
+    f.savefig("figure_2_6.png", dpi=100)
 
 
 if __name__ == "__main__":
-    figure_2_1()
-    figure_2_2()
-    figure_2_3()
-    figure_2_4()
-    figure_2_5()
-    # figure_2_6()
+    # figure_2_1()
+    # figure_2_2()
+    # figure_2_3()
+    # figure_2_4()
+    # figure_2_5()
+    figure_2_6()
