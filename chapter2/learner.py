@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Union, List
+from typing import Callable, Tuple, Union, List
 
 import numpy as np
 
@@ -89,6 +89,41 @@ class UCBLearner(BaseLearner):
         self.Q += self.initial_Q
 
 
+class GradientLearner(BaseLearner):
+    """
+    Learner that uses the mean of the rewards as the estimate of the reward and
+    uses the reward stimate to sample from an action.
+    """
+
+    def __init__(
+        self, env: KArmedEnviroment, delta: float, gradient_base: bool, **kwargs
+    ):
+        self.delta = delta
+        self.gradient_base = gradient_base
+        super().__init__(env)
+
+    def play_one(
+        self, policy: Callable[[np.ndarray], Tuple[int, np.ndarray]]
+    ) -> Observation:
+        action, self.probs = policy(self.Q)
+        reward = self.env.step(action)
+        self.steps += 1
+
+        self.one_hot[:] = 0.0
+        self.one_hot[action] = 1.0
+        if self.gradient_base:
+            self.baseline += (reward - self.baseline) / (self.steps)
+        self.Q += self.delta * (reward - self.baseline) * (self.one_hot - self.probs)
+        return Observation(action=action, reward=reward)
+
+    def reset(self):
+        self.one_hot = np.zeros(self.env.k)
+        self.probs = np.ones(self.env.k) / self.env.k
+        self.steps = 0
+        self.baseline = 0.0
+        super().reset()
+
+
 def random_policy(Q: np.ndarray) -> int:
     """
     Random policy.
@@ -116,6 +151,17 @@ def greedy_policy(Q: np.ndarray) -> int:
     Greedy policy.
     """
     return np.argmax(Q)
+
+
+def gradient_policy(Q: np.ndarray) -> Tuple[int, np.ndarray]:
+    """
+    Gradient policy.
+    """
+
+    exp_est = np.exp(Q)
+    action_prob = exp_est / np.sum(exp_est)
+    action = (np.cumsum(action_prob) >= np.random.uniform()).argmax(axis=0)
+    return action, action_prob
 
 
 # class KBanditLearner:

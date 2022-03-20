@@ -70,5 +70,4 @@ class NormalKBandit(KArmedEnviroment):
     def step(self, action: int) -> float:
         if not self.stationary:
             self._walk()
-        reward = np.random.normal(loc=self.mean[action], scale=1.0)
-        return reward
+        return np.random.normal(loc=self.mean[action], scale=1.0)

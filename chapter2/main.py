@@ -5,7 +5,14 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from chapter2.env import NormalKBandit
-from chapter2.learner import MeanLearner, UCBLearner, e_greedy_policy, greedy_policy
+from chapter2.learner import (
+    MeanLearner,
+    UCBLearner,
+    GradientLearner,
+    gradient_policy,
+    e_greedy_policy,
+    greedy_policy,
+)
 
 
 class Experiment:
@@ -49,6 +56,10 @@ class Experiment:
             return MeanLearner(env=env, **config.get("learner", {}).get("params", {}))
         elif T == "ucb":
             return UCBLearner(env=env, **config.get("learner", {}).get("params", {}))
+        elif T == "gradient":
+            return GradientLearner(
+                env=env, **config.get("learner", {}).get("params", {})
+            )
         else:
             raise ValueError(f"Learner {T} not implemented")
 
@@ -58,6 +69,8 @@ class Experiment:
             return e_greedy_policy(**config.get("policy", {}).get("params", {}))
         elif T == "greedy":
             return greedy_policy
+        elif T == "gradient":
+            return gradient_policy
         else:
             raise ValueError(f"Policy {T} not implemented")
 
@@ -71,7 +84,10 @@ class Experiment:
                     obs = learner.play_one(policy)
                     self.hist_R[t, n, i] = obs.reward
                     self.hist_A[t, n, i] = obs.action
-                self.hist_best_action[n, i] = np.argmax(learner.Q)
+                self.hist_best_action[n, i] = env.best_action
+
+                # print("learner", learner.Q)
+                # print("env", env.mean)
 
     def pct_correct_over_time(self):
         self.pct_correct = np.ones(shape=(self.t, len(self.configs)))
@@ -161,59 +177,85 @@ def figure_2_3():
     f.savefig("figure_2_3.png", dpi=100)
 
 
-# def figure_2_4():
-#     print(f"Running figure_2_4")
-#     k = 10
-#     t = 1000
-#     runs = 1000
+def figure_2_4():
+    print(f"Running figure_2_4")
+    k = 10
+    t = 1000
+    runs = 1000
 
-#     configs = [{"learner": {"eps": 0.0, "c": 2}}, {"learner": {"eps": 0.1}}]
+    configs = [
+        {
+            "learner": {"type": "ucb", "params": {"c": 2, "initial_Q": 0.0}},
+            "policy": {"type": "greedy"},
+        },
+        {"policy": {"type": "e_greedy", "params": {"epsilon": 0.1}}},
+    ]
 
-#     exp = Experiment(k, t, runs, configs)
-#     exp.run()
+    exp = Experiment(k, t, runs, configs)
+    exp.run()
 
-#     # plot
-#     f = plt.figure(figsize=(16, 8))
-#     axs = f.subplots(2, 1)
-#     exp.plot_mean_reward(axs[0])
-#     exp.plot_pct_correct(axs[1])
-#     f.savefig("figure_2_4.png", dpi=100)
+    # plot
+    f = plt.figure(figsize=(16, 8))
+    axs = f.subplots(2, 1)
+    exp.plot_mean_reward(axs[0])
+    exp.plot_pct_correct(axs[1])
+    f.savefig("figure_2_4.png", dpi=100)
 
 
-# def figure_2_5():
-#     print(f"Running figure_2_5")
-#     k = 10
-#     t = 1000
-#     runs = 2000
+def figure_2_5():
+    print(f"Running figure_2_5")
+    k = 10
+    t = 1000
+    runs = 2000
 
-#     configs = [
-#         {
-#             "learner": {"delta": 0.4, "gradient": True, "gradient_base": True},
-#             "env": {"offset": 4},
-#         },
-#         {
-#             "learner": {"delta": 0.1, "gradient": True, "gradient_base": True},
-#             "env": {"offset": 4},
-#         },
-#         {
-#             "learner": {"delta": 0.4, "gradient": True, "gradient_base": False},
-#             "env": {"offset": 4},
-#         },
-#         {
-#             "learner": {"delta": 0.1, "gradient": True, "gradient_base": False},
-#             "env": {"offset": 4},
-#         },
-#     ]
+    k = 4
+    t = 500
+    runs = 500
 
-#     exp = Experiment(k, t, runs, configs)
-#     exp.run()
+    configs = [
+        {
+            "learner": {
+                "type": "gradient",
+                "params": {"delta": 0.4, "gradient_base": True},
+            },
+            "policy": {"type": "gradient"},
+            "env": {"offset": 4},
+        },
+        {
+            "learner": {
+                "type": "gradient",
+                "params": {"delta": 0.1, "gradient_base": True},
+            },
+            "policy": {"type": "gradient"},
+            "env": {"offset": 4},
+        },
+        {
+            "learner": {
+                "type": "gradient",
+                "params": {"delta": 0.4, "gradient_base": False},
+            },
+            "policy": {"type": "gradient"},
+            "env": {"offset": 4},
+        },
+        {
+            "learner": {
+                "type": "gradient",
+                "params": {"delta": 0.1, "gradient_base": False},
+            },
+            "policy": {"type": "gradient"},
+            "env": {"offset": 4},
+        },
+    ]
 
-#     # plot
-#     f = plt.figure(figsize=(16, 8))
-#     axs = f.subplots(2, 1)
-#     exp.plot_mean_reward(axs[0])
-#     exp.plot_pct_correct(axs[1])
-#     f.savefig("figure_2_5.png", dpi=100)
+    exp = Experiment(k, t, runs, configs)
+    exp.run()
+
+    # plot
+    f = plt.figure(figsize=(16, 8))
+    axs = f.subplots(2, 1)
+    exp.plot_mean_reward(axs[0])
+    exp.plot_pct_correct(axs[1])
+    f.savefig("figure_2_5.png", dpi=100)
 
 
 # def figure_2_6():
@@ -258,9 +300,9 @@ def figure_2_3():
 
 
 if __name__ == "__main__":
-    # figure_2_1()
-    # figure_2_2()
+    figure_2_1()
+    figure_2_2()
     figure_2_3()
-    # figure_2_4()
-    # figure_2_5()
+    figure_2_4()
+    figure_2_5()
     # figure_2_6()
