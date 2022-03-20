@@ -12,6 +12,7 @@ class Experiment:
     """
     Helper class to run K-Armed Bandit experiments.
 
+
     Parameters
     ----------
     k : int
@@ -39,15 +40,29 @@ class Experiment:
         self.hist_best_action = np.zeros(shape=(self.runs, self.n_configs))
         self.pct_correct = None
 
+    def env_factory(self, config: dict):
+        return NormalKBandit(k=self.k, **config.get("env", {}))
+
+    def learner_factory(self, env, config: dict):
+        T = config.get("learner", {}).get("type", "mean")
+        if T == "mean":
+            return MeanLearner(env=env, **config.get("learner", {}).get("params", {}))
+        else:
+            raise ValueError(f"Learner {T} not implemented")
+
+    def policy_factory(self, config: dict):
+        T = config.get("policy", {}).get("type", "e_greedy")
+        if T == "e_greedy":
+            return e_greedy_policy(**config.get("policy", {}).get("params", {}))
+        else:
+            raise ValueError(f"Policy {T} not implemented")
+
     def run(self):
         for i, c in enumerate(tqdm(self.configs)):
-            for n in tqdm(range(self.runs)):
-                env_config = c.get("env", {})
-                learner_config = c.get("learner", {})
-                policy_config = c.get("policy", {})
-                env = NormalKBandit(k=self.k, **env_config)
-                learner = MeanLearner(env, **learner_config)
-                policy = e_greedy_policy(**policy_config)
+            for n in tqdm(range(self.runs), leave=False):
+                env = self.env_factory(c)
+                learner = self.learner_factory(env, c)
+                policy = self.policy_factory(c)
                 for t in range(self.t):
                     obs = learner.play_one(policy)
                     self.hist_R[t, n, i] = obs.reward
@@ -101,9 +116,9 @@ def figure_2_2():
     t = 1000
     runs = 2000
     configs = [
-        {"policy": {"epsilon": 0.0}},
-        {"policy": {"epsilon": 0.1}},
-        {"policy": {"epsilon": 0.01}},
+        {"policy": {"type": "e_greedy", "params": {"epsilon": 0.0}}},
+        {"policy": {"type": "e_greedy", "params": {"epsilon": 0.1}}},
+        {"policy": {"type": "e_greedy", "params": {"epsilon": 0.01}}},
     ]
 
     exp = Experiment(k, t, runs, configs)
