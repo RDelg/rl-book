@@ -86,9 +86,6 @@ class Experiment:
                     self.hist_A[t, n, i] = obs.action
                 self.hist_best_action[n, i] = env.best_action
 
-                # print("learner", learner.Q)
-                # print("env", env.mean)
-
     def pct_correct_over_time(self):
         self.pct_correct = np.ones(shape=(self.t, len(self.configs)))
         for i in range(self.t):
@@ -320,9 +317,9 @@ def figure_2_6():
 
 
 if __name__ == "__main__":
-    # figure_2_1()
-    # figure_2_2()
-    # figure_2_3()
-    # figure_2_4()
-    # figure_2_5()
+    figure_2_1()
+    figure_2_2()
+    figure_2_3()
+    figure_2_4()
+    figure_2_5()
     figure_2_6()
